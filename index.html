@@ -8,76 +8,107 @@
     <style>
         .timer-bar { transition: width 1s linear; }
         .hidden-screen { display: none; }
+        /* Animation rung khi sai */
+        .shake { animation: shake 0.5s; }
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            10% { transform: translate(-1px, -2px) rotate(-1deg); }
+            20% { transform: translate(-3px, 0px) rotate(1deg); }
+            30% { transform: translate(3px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(1deg); }
+            50% { transform: translate(-1px, 2px) rotate(-1deg); }
+            60% { transform: translate(-3px, 1px) rotate(0deg); }
+            70% { transform: translate(3px, 1px) rotate(-1deg); }
+            80% { transform: translate(-1px, -1px) rotate(1deg); }
+            90% { transform: translate(1px, 2px) rotate(0deg); }
+            100% { transform: translate(1px, -2px) rotate(-1deg); }
+        }
     </style>
 </head>
-<body class="bg-slate-100 text-slate-800 font-sans min-h-screen flex items-center justify-center p-4">
+<body class="bg-slate-100 text-slate-800 font-sans min-h-screen flex items-center justify-center p-2 sm:p-4">
 
     <div class="bg-white shadow-xl rounded-2xl w-full max-w-4xl overflow-hidden min-h-[650px] flex flex-col relative">
 
-        <header class="bg-blue-600 text-white p-4 text-center text-xl font-bold uppercase tracking-wider">
+        <header class="bg-blue-600 text-white p-4 text-center text-xl font-bold uppercase tracking-wider shadow-md z-10">
             Hệ Thống Luyện Tập Chạy Trạm
         </header>
 
-        <div id="setup-screen" class="flex-1 flex flex-col items-center justify-center p-8 space-y-6">
+        <div id="setup-screen" class="flex-1 flex flex-col items-center justify-center p-6 sm:p-8 space-y-6">
             <div class="text-center space-y-2">
                 <h2 class="text-2xl font-bold text-gray-700">Cấu hình bài thi</h2>
                 <p class="text-gray-500">Chọn thư mục ảnh và thiết lập thông số.</p>
             </div>
 
             <div class="w-full max-w-md space-y-4">
-                <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:bg-gray-50 transition cursor-pointer relative">
+                <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:bg-gray-50 transition cursor-pointer relative bg-gray-50/50">
                     <input type="file" id="folderInput" webkitdirectory directory multiple class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
                     <div class="space-y-2 pointer-events-none">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mx-auto text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-                        </svg>
+                        <div class="mx-auto h-12 w-12 text-blue-500 bg-blue-100 rounded-full flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                            </svg>
+                        </div>
                         <p id="file-label" class="font-medium text-gray-600">Nhấn để chọn thư mục ảnh</p>
-                        <p class="text-xs text-gray-400">Quy tắc tên: Dapan_Rac.png (VD: Ascaris_1.jpg)</p>
+                        <p class="text-xs text-gray-400">Quy tắc tên: Dapan_Rac.png</p>
                     </div>
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Thời gian/trạm (giây)</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Thời gian (giây)</label>
                         <input type="number" id="timeInput" value="30" min="5" class="w-full border-gray-300 rounded-md shadow-sm border p-3 focus:ring-blue-500 focus:border-blue-500 text-center text-lg font-bold">
                     </div>
-                    
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Số lượng trạm thi</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Số trạm thi</label>
                         <input type="number" id="limitInput" placeholder="Tất cả" min="1" class="w-full border-gray-300 rounded-md shadow-sm border p-3 focus:ring-blue-500 focus:border-blue-500 text-center text-lg font-bold disabled:bg-gray-100" disabled>
                     </div>
                 </div>
                 
                 <p id="total-files-msg" class="text-xs text-center text-gray-400 h-4"></p>
 
-                <button id="startBtn" disabled class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow transition disabled:opacity-50 disabled:cursor-not-allowed">
+                <button id="startBtn" disabled class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-lg shadow-lg transition transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none">
                     BẮT ĐẦU LÀM BÀI
                 </button>
             </div>
         </div>
 
-        <div id="quiz-screen" class="hidden-screen flex-1 flex flex-col">
+        <div id="quiz-screen" class="hidden-screen flex-1 flex flex-col bg-gray-50">
             <div class="w-full bg-gray-200 h-2">
                 <div id="timer-bar" class="bg-green-500 h-2 w-full timer-bar"></div>
             </div>
 
-            <div class="flex-1 flex items-center justify-center bg-gray-900 relative overflow-hidden group">
-                <img id="quiz-image" src="" alt="Question" class="max-h-[400px] object-contain transition-transform duration-300">
-                <div class="absolute top-2 right-2 bg-black/50 text-white px-3 py-1 rounded-full text-sm">
+            <div class="flex-1 flex items-center justify-center bg-gray-900 relative overflow-hidden group min-h-[300px]">
+                <img id="quiz-image" src="" alt="Question" class="max-h-full max-w-full object-contain p-2">
+                <div class="absolute top-4 right-4 bg-black/60 backdrop-blur-sm text-white px-4 py-1.5 rounded-full text-sm font-medium border border-white/20">
                     Câu: <span id="current-q">0</span>/<span id="total-q">0</span>
                 </div>
             </div>
 
-            <div class="p-6 bg-white border-t space-y-4">
+            <div class="p-4 sm:p-6 bg-white border-t shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-20">
+                
                 <div id="input-area">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Nhập đáp án (Phân biệt hoa thường):</label>
-                    <input type="text" id="answerInput" class="w-full border-2 border-gray-300 rounded-lg p-3 text-lg focus:outline-none focus:border-blue-500 font-mono" placeholder="Nhập tên chi tiết..." autocomplete="off">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Nhập đáp án (Phân biệt Hoa/thường):</label>
+                    <div class="flex flex-col sm:flex-row gap-3">
+                        <input type="text" id="answerInput" class="flex-1 border-2 border-gray-300 rounded-lg p-3 text-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 font-mono transition" placeholder="Nhập tên chi tiết..." autocomplete="off">
+                        
+                        <button id="submitBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow transition active:scale-95 whitespace-nowrap">
+                            TRẢ LỜI
+                        </button>
+                    </div>
                 </div>
 
-                <div id="feedback-area" class="hidden text-center space-y-3">
-                    <div id="feedback-message" class="text-xl font-bold"></div>
-                    <div class="text-gray-600">Đáp án đúng: <span id="correct-answer-display" class="font-bold text-blue-600"></span></div>
-                    <div class="text-sm text-gray-400 italic">(Nhấn Enter để qua câu tiếp theo)</div>
+                <div id="feedback-area" class="hidden flex flex-col items-center justify-center space-y-4 py-2">
+                    <div class="text-center space-y-1">
+                        <div id="feedback-message" class="text-2xl font-black tracking-tight"></div>
+                        <div class="text-gray-600 text-lg">Đáp án đúng: <span id="correct-answer-display" class="font-bold text-blue-600 select-all"></span></div>
+                    </div>
+                    
+                    <button id="nextBtn" class="w-full sm:w-auto bg-gray-800 hover:bg-gray-900 text-white font-bold py-3 px-12 rounded-full shadow-lg transition transform hover:-translate-y-1 active:translate-y-0 flex items-center justify-center gap-2">
+                        <span>Câu tiếp theo</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M12.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 010-1.414z" clip-rule="evenodd" />
+                        </svg>
+                    </button>
                 </div>
             </div>
         </div>
@@ -89,21 +120,21 @@
             </div>
 
             <div class="grid grid-cols-2 gap-6 w-full max-w-sm">
-                <div class="bg-green-100 p-6 rounded-xl text-center border-2 border-green-200">
-                    <p class="text-3xl font-bold text-green-600" id="score-correct">0</p>
-                    <p class="text-sm text-green-800 font-medium">Đúng</p>
+                <div class="bg-green-50 p-6 rounded-2xl text-center border border-green-200 shadow-sm">
+                    <p class="text-4xl font-black text-green-500" id="score-correct">0</p>
+                    <p class="text-sm text-green-700 font-semibold uppercase tracking-wide mt-1">Đúng</p>
                 </div>
-                <div class="bg-red-100 p-6 rounded-xl text-center border-2 border-red-200">
-                    <p class="text-3xl font-bold text-red-600" id="score-wrong">0</p>
-                    <p class="text-sm text-red-800 font-medium">Sai</p>
+                <div class="bg-red-50 p-6 rounded-2xl text-center border border-red-200 shadow-sm">
+                    <p class="text-4xl font-black text-red-500" id="score-wrong">0</p>
+                    <p class="text-sm text-red-700 font-semibold uppercase tracking-wide mt-1">Sai</p>
                 </div>
             </div>
 
-            <div class="text-xl font-bold text-blue-900">
-                Tổng điểm: <span id="final-score">0</span>/10
+            <div class="text-2xl font-bold text-blue-900 bg-blue-50 px-8 py-4 rounded-xl border border-blue-100">
+                Tổng điểm: <span id="final-score" class="text-3xl">0</span>/10
             </div>
 
-            <button onclick="location.reload()" class="bg-gray-800 hover:bg-gray-900 text-white font-bold py-3 px-8 rounded-lg shadow transition flex items-center gap-2">
+            <button onclick="location.reload()" class="bg-gray-800 hover:bg-gray-900 text-white font-bold py-3.5 px-8 rounded-lg shadow-lg transition flex items-center gap-2 transform hover:scale-105">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                     <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd" />
                 </svg>
@@ -115,8 +146,8 @@
 
     <script>
         // --- VARIABLES ---
-        let allQuestions = []; // Lưu toàn bộ ảnh load được
-        let quizQuestions = []; // Lưu danh sách ảnh sẽ thi (sau khi lọc giới hạn)
+        let allQuestions = [];
+        let quizQuestions = [];
         let currentIndex = 0;
         let score = 0;
         let timeLimit = 30;
@@ -142,6 +173,10 @@
         const inputArea = document.getElementById('input-area');
         const feedbackMessage = document.getElementById('feedback-message');
         const correctAnswerDisplay = document.getElementById('correct-answer-display');
+        
+        // Buttons mới
+        const submitBtn = document.getElementById('submitBtn');
+        const nextBtn = document.getElementById('nextBtn');
 
         // --- EVENT LISTENERS ---
 
@@ -150,23 +185,18 @@
             const imageFiles = files.filter(file => file.type.startsWith('image/'));
             
             if (imageFiles.length > 0) {
-                // Xử lý dữ liệu ảnh
                 allQuestions = imageFiles.map(file => {
                     const nameWithoutExt = file.name.substring(0, file.name.lastIndexOf('.'));
                     const answer = nameWithoutExt.split('_')[0];
                     return { file: file, answer: answer };
                 });
                 
-                // Cập nhật UI Setup
                 fileLabel.innerText = `Đã load ${allQuestions.length} ảnh`;
                 fileLabel.classList.add('text-green-600');
-                
-                // Mở khóa input giới hạn số câu
                 limitInput.disabled = false;
                 limitInput.max = allQuestions.length;
                 limitInput.placeholder = `Max: ${allQuestions.length}`;
-                totalFilesMsg.innerText = `Tìm thấy tổng cộng ${allQuestions.length} ảnh trong thư mục.`;
-                
+                totalFilesMsg.innerText = `Tìm thấy ${allQuestions.length} ảnh.`;
                 startBtn.disabled = false;
             } else {
                 fileLabel.innerText = "Không tìm thấy file ảnh nào!";
@@ -178,37 +208,43 @@
 
         startBtn.addEventListener('click', () => {
             timeLimit = parseInt(document.getElementById('timeInput').value) || 30;
-            
-            // 1. Trộn đề trước
             shuffleArray(allQuestions);
 
-            // 2. Xử lý giới hạn số câu
             const limitVal = parseInt(limitInput.value);
             if (limitVal > 0 && limitVal <= allQuestions.length) {
                 quizQuestions = allQuestions.slice(0, limitVal);
             } else {
-                // Nếu để trống hoặc nhập số tào lao -> lấy hết
                 quizQuestions = [...allQuestions];
             }
 
-            // 3. Reset các biến
             currentIndex = 0;
             score = 0;
-            
             showScreen('quiz');
             loadQuestion();
         });
 
+        // Xử lý phím Enter
+        
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 if (screens.quiz.classList.contains('hidden-screen')) return;
-                if (isFeedbackMode) {
+                if (isFeedbackMode) 
+                {
+                    console.log("Tesstt feed next")
                     nextQuestion();
-                } else {
+                }
+                else 
+                {
+                    console.log("Test feed check")
                     checkAnswer();
+                    
                 }
             }
         });
+        
+        // Xử lý click nút (Cho cảm ứng/chuột)
+        submitBtn.addEventListener('click', () => checkAnswer());
+        nextBtn.addEventListener('click', () => nextQuestion());
 
         // --- FUNCTIONS ---
 
@@ -236,6 +272,9 @@
             answerInput.value = '';
             answerInput.disabled = false;
             answerInput.focus();
+            
+            // Xóa class rung cũ nếu có
+            screens.quiz.classList.remove('shake');
             
             document.getElementById('current-q').innerText = currentIndex + 1;
             document.getElementById('total-q').innerText = quizQuestions.length;
@@ -275,11 +314,12 @@
         }
 
         function checkAnswer(isTimeout = false) {
+            console.log("Hi")
             clearInterval(timerInterval);
             timerBar.style.transition = 'none';
             
             const currentQ = quizQuestions[currentIndex];
-            const userAnswer = answerInput.value;
+            const userAnswer = answerInput.value.trim(); // Trim khoảng trắng thừa
             const correctAnswer = currentQ.answer;
 
             const isCorrect = (userAnswer === correctAnswer);
@@ -287,10 +327,13 @@
             if (isCorrect) {
                 score++;
                 feedbackMessage.innerText = "CHÍNH XÁC!";
-                feedbackMessage.className = "text-xl font-bold text-green-600";
+                feedbackMessage.className = "text-2xl font-black text-green-600 tracking-tight";
             } else {
                 feedbackMessage.innerText = isTimeout ? "HẾT GIỜ!" : "SAI RỒI!";
-                feedbackMessage.className = "text-xl font-bold text-red-600";
+                feedbackMessage.className = "text-2xl font-black text-red-600 tracking-tight";
+                
+                // Hiệu ứng rung màn hình khi sai
+                screens.quiz.classList.add('shake');
             }
 
             inputArea.classList.add('hidden');
@@ -298,9 +341,11 @@
             correctAnswerDisplay.innerText = correctAnswer;
             
             isFeedbackMode = true;
+            //nextBtn.focus(); // Focus vào nút next để tiện bấm phím Space/Enter nếu muốn
         }
 
         function nextQuestion() {
+            console.log("next q")
             URL.revokeObjectURL(quizImage.src);
             currentIndex++;
             loadQuestion();
@@ -311,13 +356,14 @@
             document.getElementById('score-correct').innerText = score;
             document.getElementById('score-wrong').innerText = quizQuestions.length - score;
             
-            // Tính điểm thang 10
             let final = 0;
             if (quizQuestions.length > 0) {
                 final = (score / quizQuestions.length * 10).toFixed(1);
             }
             document.getElementById('final-score').innerText = final;
         }
+        
+
     </script>
 </body>
 </html>
