@@ -8,72 +8,98 @@
     <style>
         .timer-bar { transition: width 1s linear; }
         .hidden-screen { display: none; }
-        /* Animation rung khi sai */
         .shake { animation: shake 0.5s; }
         @keyframes shake {
             0% { transform: translate(1px, 1px) rotate(0deg); }
             10% { transform: translate(-1px, -2px) rotate(-1deg); }
-            20% { transform: translate(-3px, 0px) rotate(1deg); }
             30% { transform: translate(3px, 2px) rotate(0deg); }
-            40% { transform: translate(1px, -1px) rotate(1deg); }
             50% { transform: translate(-1px, 2px) rotate(-1deg); }
-            60% { transform: translate(-3px, 1px) rotate(0deg); }
             70% { transform: translate(3px, 1px) rotate(-1deg); }
-            80% { transform: translate(-1px, -1px) rotate(1deg); }
-            90% { transform: translate(1px, 2px) rotate(0deg); }
             100% { transform: translate(1px, -2px) rotate(-1deg); }
         }
+        /* Style cho nút MCQ */
+        .mcq-btn:hover { transform: translateY(-2px); }
+        .mcq-btn:active { transform: translateY(0); }
     </style>
 </head>
 <body class="bg-slate-100 text-slate-800 font-sans min-h-screen flex items-center justify-center p-2 sm:p-4">
 
-    <div class="bg-white shadow-xl rounded-2xl w-full max-w-4xl overflow-hidden min-h-[650px] flex flex-col relative">
+    <div class="bg-white shadow-xl rounded-2xl w-full max-w-5xl overflow-hidden min-h-[700px] flex flex-col relative">
 
-        <header class="bg-blue-600 text-white p-4 text-center text-xl font-bold uppercase tracking-wider shadow-md z-10">
-            Hệ Thống Luyện Tập Chạy Trạm
+        <header class="bg-blue-600 text-white p-4 text-center text-xl font-bold uppercase tracking-wider shadow-md z-10 flex justify-between items-center">
+            <div class="w-8"></div> <span>Hệ Thống Luyện Tập Chạy Trạm</span>
+            <button onclick="location.reload()" class="text-xs bg-blue-700 px-2 py-1 rounded hover:bg-blue-800" title="Reset toàn bộ">Reset</button>
         </header>
 
-        <div id="setup-screen" class="flex-1 flex flex-col items-center justify-center p-6 sm:p-8 space-y-6">
-            <div class="text-center space-y-2">
-                <h2 class="text-2xl font-bold text-gray-700">Cấu hình bài thi</h2>
-                <p class="text-gray-500">Chọn thư mục ảnh và thiết lập thông số.</p>
-            </div>
-
-            <div class="w-full max-w-md space-y-4">
-                <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:bg-gray-50 transition cursor-pointer relative bg-gray-50/50">
-                    <input type="file" id="folderInput" webkitdirectory directory multiple class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
-                    <div class="space-y-2 pointer-events-none">
-                        <div class="mx-auto h-12 w-12 text-blue-500 bg-blue-100 rounded-full flex items-center justify-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-                            </svg>
-                        </div>
-                        <p id="file-label" class="font-medium text-gray-600">Nhấn để chọn thư mục ảnh</p>
-                        <p class="text-xs text-gray-400">Quy tắc tên: Dapan_Rac.png</p>
+        <div id="setup-screen" class="flex-1 flex flex-col items-center p-6 space-y-6 overflow-y-auto">
+            
+            <div class="w-full max-w-2xl space-y-4">
+                <h2 class="text-xl font-bold text-gray-700 border-l-4 border-blue-600 pl-3">1. Chọn dữ liệu ảnh</h2>
+                
+                <div class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:bg-blue-50 transition cursor-pointer relative bg-gray-50 group">
+                    <input type="file" id="folderInput" webkitdirectory directory multiple class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+                    <div class="flex items-center justify-center gap-3 pointer-events-none group-hover:text-blue-600">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-gray-400 group-hover:text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                        </svg>
+                        <span class="font-medium text-gray-600 group-hover:text-blue-600">Thêm thư mục ảnh</span>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Thời gian (giây)</label>
-                        <input type="number" id="timeInput" value="30" min="5" class="w-full border-gray-300 rounded-md shadow-sm border p-3 focus:ring-blue-500 focus:border-blue-500 text-center text-lg font-bold">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Số trạm thi</label>
-                        <input type="number" id="limitInput" placeholder="Tất cả" min="1" class="w-full border-gray-300 rounded-md shadow-sm border p-3 focus:ring-blue-500 focus:border-blue-500 text-center text-lg font-bold disabled:bg-gray-100" disabled>
-                    </div>
+                <div id="folder-list" class="space-y-2 max-h-40 overflow-y-auto pr-2">
+                    <p class="text-sm text-gray-400 italic text-center py-2" id="empty-folder-msg">Chưa có thư mục nào được chọn</p>
                 </div>
                 
-                <p id="total-files-msg" class="text-xs text-center text-gray-400 h-4"></p>
+                <div class="text-right text-sm text-gray-500">
+                    Tổng số ảnh: <span id="total-img-count" class="font-bold text-blue-600 text-lg">0</span>
+                </div>
+            </div>
 
-                <button id="startBtn" disabled class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-lg shadow-lg transition transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none">
-                    BẮT ĐẦU LÀM BÀI
+            <hr class="w-full max-w-2xl border-gray-200">
+
+            <div class="w-full max-w-2xl space-y-4">
+                <h2 class="text-xl font-bold text-gray-700 border-l-4 border-blue-600 pl-3">2. Cấu hình thi</h2>
+                
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div class="bg-gray-50 p-3 rounded-lg border">
+                        <label class="block text-sm font-bold text-gray-700 mb-2">Chế độ thi</label>
+                        <div class="flex gap-2">
+                            <label class="flex-1 cursor-pointer">
+                                <input type="radio" name="quizMode" value="input" class="peer sr-only" checked>
+                                <div class="text-center py-2 rounded border peer-checked:bg-blue-600 peer-checked:text-white peer-checked:border-blue-600 bg-white text-gray-600 hover:bg-gray-100 transition">
+                                    Tự luận
+                                </div>
+                            </label>
+                            <label class="flex-1 cursor-pointer">
+                                <input type="radio" name="quizMode" value="mcq" class="peer sr-only">
+                                <div class="text-center py-2 rounded border peer-checked:bg-blue-600 peer-checked:text-white peer-checked:border-blue-600 bg-white text-gray-600 hover:bg-gray-100 transition">
+                                    Trắc nghiệm
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="bg-gray-50 p-3 rounded-lg border">
+                        <label class="block text-sm font-bold text-gray-700 mb-2">Thời gian (giây)</label>
+                        <input type="number" id="timeInput" value="30" min="5" class="w-full border-gray-300 rounded border p-2 text-center font-bold focus:outline-none focus:border-blue-500">
+                    </div>
+
+                    <div class="bg-gray-50 p-3 rounded-lg border">
+                        <label class="block text-sm font-bold text-gray-700 mb-2">Số trạm thi</label>
+                        <input type="number" id="limitInput" placeholder="Tất cả" min="1" class="w-full border-gray-300 rounded border p-2 text-center font-bold focus:outline-none focus:border-blue-500 disabled:bg-gray-200" disabled>
+                    </div>
+                </div>
+            </div>
+
+            <div class="w-full max-w-2xl pt-4">
+                <button id="startBtn" disabled class="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-4 rounded-xl shadow-lg transition transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none uppercase tracking-wide">
+                    Vào thi ngay
                 </button>
             </div>
         </div>
 
-        <div id="quiz-screen" class="hidden-screen flex-1 flex flex-col bg-gray-50">
-            <div class="w-full bg-gray-200 h-2">
+        <div id="quiz-screen" class="hidden-screen flex-1 flex flex-col bg-gray-50 h-full">
+            <div class="w-full bg-gray-200 h-2 flex-shrink-0">
                 <div id="timer-bar" class="bg-green-500 h-2 w-full timer-bar"></div>
             </div>
 
@@ -84,60 +110,51 @@
                 </div>
             </div>
 
-            <div class="p-4 sm:p-6 bg-white border-t shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-20">
+            <div class="p-4 sm:p-6 bg-white border-t shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-20 flex-shrink-0 min-h-[200px] flex flex-col justify-center">
                 
-                <div id="input-area">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Nhập đáp án (Phân biệt Hoa/thường):</label>
+                <div id="input-area" class="hidden-mode">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Nhập đáp án (Chính xác từng chữ):</label>
                     <div class="flex flex-col sm:flex-row gap-3">
-                        <input type="text" id="answerInput" class="flex-1 border-2 border-gray-300 rounded-lg p-3 text-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 font-mono transition" placeholder="Nhập tên chi tiết..." autocomplete="off">
-                        
-                        <button id="submitBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow transition active:scale-95 whitespace-nowrap">
+                        <input type="text" id="answerInput" class="flex-1 border-2 border-gray-300 rounded-lg p-3 text-lg focus:outline-none focus:border-blue-500 font-mono transition shadow-sm" placeholder="Gõ tên..." autocomplete="off">
+                        <button id="submitBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg shadow transition active:scale-95 whitespace-nowrap">
                             TRẢ LỜI
                         </button>
                     </div>
                 </div>
 
-                <div id="feedback-area" class="hidden flex flex-col items-center justify-center space-y-4 py-2">
+                <div id="mcq-area" class="hidden-mode grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
+                    </div>
+
+                <div id="feedback-area" class="hidden flex flex-col items-center justify-center space-y-3 py-1">
                     <div class="text-center space-y-1">
                         <div id="feedback-message" class="text-2xl font-black tracking-tight"></div>
                         <div class="text-gray-600 text-lg">Đáp án đúng: <span id="correct-answer-display" class="font-bold text-blue-600 select-all"></span></div>
                     </div>
-                    
                     <button id="nextBtn" class="w-full sm:w-auto bg-gray-800 hover:bg-gray-900 text-white font-bold py-3 px-12 rounded-full shadow-lg transition transform hover:-translate-y-1 active:translate-y-0 flex items-center justify-center gap-2">
                         <span>Câu tiếp theo</span>
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M12.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 010-1.414z" clip-rule="evenodd" />
-                        </svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
                     </button>
                 </div>
             </div>
         </div>
 
         <div id="result-screen" class="hidden-screen flex-1 flex flex-col items-center justify-center p-8 space-y-8">
-            <div class="text-center">
-                <h2 class="text-3xl font-bold text-gray-800 mb-2">Hoàn Thành!</h2>
-                <p class="text-gray-500">Kết quả chạy trạm của bạn</p>
-            </div>
-
+            <h2 class="text-3xl font-bold text-gray-800">Kết quả bài thi</h2>
             <div class="grid grid-cols-2 gap-6 w-full max-w-sm">
-                <div class="bg-green-50 p-6 rounded-2xl text-center border border-green-200 shadow-sm">
+                <div class="bg-green-50 p-6 rounded-2xl text-center border border-green-200">
                     <p class="text-4xl font-black text-green-500" id="score-correct">0</p>
-                    <p class="text-sm text-green-700 font-semibold uppercase tracking-wide mt-1">Đúng</p>
+                    <p class="text-sm text-green-700 font-bold uppercase mt-1">Đúng</p>
                 </div>
-                <div class="bg-red-50 p-6 rounded-2xl text-center border border-red-200 shadow-sm">
+                <div class="bg-red-50 p-6 rounded-2xl text-center border border-red-200">
                     <p class="text-4xl font-black text-red-500" id="score-wrong">0</p>
-                    <p class="text-sm text-red-700 font-semibold uppercase tracking-wide mt-1">Sai</p>
+                    <p class="text-sm text-red-700 font-bold uppercase mt-1">Sai</p>
                 </div>
             </div>
-
             <div class="text-2xl font-bold text-blue-900 bg-blue-50 px-8 py-4 rounded-xl border border-blue-100">
-                Tổng điểm: <span id="final-score" class="text-3xl">0</span>/10
+                Điểm số: <span id="final-score" class="text-3xl">0</span>/10
             </div>
-
-            <button onclick="location.reload()" class="bg-gray-800 hover:bg-gray-900 text-white font-bold py-3.5 px-8 rounded-lg shadow-lg transition flex items-center gap-2 transform hover:scale-105">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd" />
-                </svg>
+            <button onclick="location.reload()" class="bg-gray-800 hover:bg-gray-900 text-white font-bold py-3.5 px-8 rounded-lg shadow-lg transition flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd" /></svg>
                 Làm đề khác
             </button>
         </div>
@@ -146,13 +163,17 @@
 
     <script>
         // --- VARIABLES ---
-        let allQuestions = [];
-        let quizQuestions = [];
+        let loadedFolders = []; // Mảng chứa các object {id, name, files[]}
+        let allQuestions = []; // Tổng hợp tất cả câu hỏi từ loadedFolders
+        let quizQuestions = []; // Danh sách câu hỏi sau khi lọc và shuffle
+        let folderCounter = 0; // Để tạo ID duy nhất cho folder
+        
         let currentIndex = 0;
         let score = 0;
         let timeLimit = 30;
         let timerInterval;
         let isFeedbackMode = false;
+        let currentMode = 'input'; // 'input' hoặc 'mcq'
 
         // --- DOM ELEMENTS ---
         const screens = {
@@ -161,55 +182,113 @@
             result: document.getElementById('result-screen')
         };
         const folderInput = document.getElementById('folderInput');
-        const startBtn = document.getElementById('startBtn');
-        const fileLabel = document.getElementById('file-label');
+        const folderListEl = document.getElementById('folder-list');
+        const emptyFolderMsg = document.getElementById('empty-folder-msg');
+        const totalImgCountEl = document.getElementById('total-img-count');
         const limitInput = document.getElementById('limitInput');
-        const totalFilesMsg = document.getElementById('total-files-msg');
+        const startBtn = document.getElementById('startBtn');
         
         const quizImage = document.getElementById('quiz-image');
-        const answerInput = document.getElementById('answerInput');
         const timerBar = document.getElementById('timer-bar');
-        const feedbackArea = document.getElementById('feedback-area');
+        
+        // Areas
         const inputArea = document.getElementById('input-area');
+        const mcqArea = document.getElementById('mcq-area');
+        const feedbackArea = document.getElementById('feedback-area');
+        
+        // Input/Display
+        const answerInput = document.getElementById('answerInput');
         const feedbackMessage = document.getElementById('feedback-message');
         const correctAnswerDisplay = document.getElementById('correct-answer-display');
-        
-        // Buttons mới
         const submitBtn = document.getElementById('submitBtn');
         const nextBtn = document.getElementById('nextBtn');
 
-        // --- EVENT LISTENERS ---
+        // --- FOLDER MANAGEMENT ---
 
         folderInput.addEventListener('change', (e) => {
             const files = Array.from(e.target.files);
             const imageFiles = files.filter(file => file.type.startsWith('image/'));
             
             if (imageFiles.length > 0) {
-                allQuestions = imageFiles.map(file => {
-                    const nameWithoutExt = file.name.substring(0, file.name.lastIndexOf('.'));
-                    const answer = nameWithoutExt.split('_')[0];
-                    return { file: file, answer: answer };
-                });
+                // Lấy tên folder gốc (do webkitdirectory trả về path tương đối)
+                const folderName = imageFiles[0].webkitRelativePath.split('/')[0] || "Thư mục " + (folderCounter + 1);
                 
-                fileLabel.innerText = `Đã load ${allQuestions.length} ảnh`;
-                fileLabel.classList.add('text-green-600');
-                limitInput.disabled = false;
-                limitInput.max = allQuestions.length;
-                limitInput.placeholder = `Max: ${allQuestions.length}`;
-                totalFilesMsg.innerText = `Tìm thấy ${allQuestions.length} ảnh.`;
-                startBtn.disabled = false;
-            } else {
-                fileLabel.innerText = "Không tìm thấy file ảnh nào!";
-                fileLabel.classList.add('text-red-600');
-                startBtn.disabled = true;
-                limitInput.disabled = true;
+                const newFolder = {
+                    id: folderCounter++,
+                    name: folderName,
+                    files: imageFiles.map(file => {
+                        const nameWithoutExt = file.name.substring(0, file.name.lastIndexOf('.'));
+                        const answer = nameWithoutExt.split('_')[0];
+                        return { file: file, answer: answer };
+                    })
+                };
+                
+                loadedFolders.push(newFolder);
+                updateFolderList();
             }
+            // Reset input để có thể chọn lại cùng folder nếu muốn (dù ít khi)
+            folderInput.value = '';
         });
 
-        startBtn.addEventListener('click', () => {
-            timeLimit = parseInt(document.getElementById('timeInput').value) || 30;
-            shuffleArray(allQuestions);
+        function updateFolderList() {
+            folderListEl.innerHTML = '';
+            
+            if (loadedFolders.length === 0) {
+                folderListEl.appendChild(emptyFolderMsg);
+                totalImgCountEl.innerText = 0;
+                startBtn.disabled = true;
+                limitInput.disabled = true;
+                limitInput.value = '';
+                limitInput.placeholder = "Tất cả";
+                return;
+            }
 
+            // Render list
+            let totalImages = 0;
+            loadedFolders.forEach(folder => {
+                totalImages += folder.files.length;
+                
+                const item = document.createElement('div');
+                item.className = "flex justify-between items-center bg-white p-3 rounded border shadow-sm";
+                item.innerHTML = `
+                    <div class="flex items-center gap-2 overflow-hidden">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-yellow-500 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor"><path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" /></svg>
+                        <span class="font-medium truncate text-gray-700" title="${folder.name}">${folder.name}</span>
+                        <span class="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full">${folder.files.length} ảnh</span>
+                    </div>
+                    <button onclick="removeFolder(${folder.id})" class="text-red-400 hover:text-red-600 p-1 hover:bg-red-50 rounded transition">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
+                    </button>
+                `;
+                folderListEl.appendChild(item);
+            });
+
+            // Update stats
+            totalImgCountEl.innerText = totalImages;
+            limitInput.disabled = false;
+            limitInput.max = totalImages;
+            limitInput.placeholder = `Max: ${totalImages}`;
+            startBtn.disabled = false;
+        }
+
+        window.removeFolder = function(id) {
+            loadedFolders = loadedFolders.filter(f => f.id !== id);
+            updateFolderList();
+        };
+
+        // --- GAME LOGIC ---
+
+        startBtn.addEventListener('click', () => {
+            // 1. Gộp tất cả ảnh từ các folder
+            allQuestions = loadedFolders.flatMap(f => f.files);
+            
+            // 2. Lấy config
+            timeLimit = parseInt(document.getElementById('timeInput').value) || 30;
+            const modeRadios = document.getElementsByName('quizMode');
+            modeRadios.forEach(r => { if(r.checked) currentMode = r.value });
+
+            // 3. Trộn và cắt đề
+            shuffleArray(allQuestions);
             const limitVal = parseInt(limitInput.value);
             if (limitVal > 0 && limitVal <= allQuestions.length) {
                 quizQuestions = allQuestions.slice(0, limitVal);
@@ -217,36 +296,29 @@
                 quizQuestions = [...allQuestions];
             }
 
+            // 4. Reset & Start
             currentIndex = 0;
             score = 0;
             showScreen('quiz');
             loadQuestion();
         });
 
-        // Xử lý phím Enter
-        
+        // Enter key handling
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 if (screens.quiz.classList.contains('hidden-screen')) return;
-                if (isFeedbackMode) 
-                {
-                    console.log("Tesstt feed next")
+                
+                if (isFeedbackMode) {
                     nextQuestion();
-                }
-                else 
-                {
-                    console.log("Test feed check")
-                    checkAnswer();
-                    
+                } else {
+                    // Chỉ dùng Enter cho mode Tự luận
+                    if (currentMode === 'input') checkAnswerInput(); 
                 }
             }
         });
         
-        // Xử lý click nút (Cho cảm ứng/chuột)
-        submitBtn.addEventListener('click', () => checkAnswer());
+        submitBtn.addEventListener('click', () => checkAnswerInput());
         nextBtn.addEventListener('click', () => nextQuestion());
-
-        // --- FUNCTIONS ---
 
         function showScreen(screenName) {
             Object.values(screens).forEach(el => el.classList.add('hidden-screen'));
@@ -267,33 +339,65 @@
             }
 
             isFeedbackMode = false;
-            inputArea.classList.remove('hidden');
             feedbackArea.classList.add('hidden');
-            answerInput.value = '';
-            answerInput.disabled = false;
-            answerInput.focus();
-            
-            // Xóa class rung cũ nếu có
             screens.quiz.classList.remove('shake');
             
             document.getElementById('current-q').innerText = currentIndex + 1;
             document.getElementById('total-q').innerText = quizQuestions.length;
 
             const currentQ = quizQuestions[currentIndex];
-            const imageUrl = URL.createObjectURL(currentQ.file);
-            quizImage.src = imageUrl;
+            quizImage.src = URL.createObjectURL(currentQ.file);
+
+            // Setup UI theo Mode
+            if (currentMode === 'input') {
+                inputArea.classList.remove('hidden-mode', 'hidden');
+                mcqArea.classList.add('hidden-mode', 'hidden');
+                answerInput.value = '';
+                answerInput.disabled = false;
+                answerInput.focus();
+            } else {
+                inputArea.classList.add('hidden-mode', 'hidden');
+                mcqArea.classList.remove('hidden-mode', 'hidden');
+                setupMCQ(currentQ);
+            }
 
             startTimer();
+        }
+
+        function setupMCQ(currentQ) {
+            mcqArea.innerHTML = '';
+            
+            // Lấy toàn bộ đáp án duy nhất
+            const uniqueAnswers = [...new Set(allQuestions.map(q => q.answer))];
+            
+            // Lọc ra các đáp án SAI (không trùng với đáp án đúng hiện tại)
+            const wrongAnswers = uniqueAnswers.filter(a => a !== currentQ.answer);
+            
+            // Lấy random 3 câu sai
+            shuffleArray(wrongAnswers);
+            const selectedWrong = wrongAnswers.slice(0, 3);
+            
+            // Gộp với câu đúng
+            const options = [...selectedWrong, currentQ.answer];
+            shuffleArray(options); // Trộn vị trí
+
+            // Render buttons
+            options.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = "mcq-btn w-full bg-white border-2 border-gray-200 hover:border-blue-400 hover:bg-blue-50 text-gray-800 font-medium py-3 px-4 rounded-xl shadow-sm transition text-left truncate";
+                btn.innerText = opt;
+                btn.onclick = () => checkAnswerMCQ(opt, btn);
+                mcqArea.appendChild(btn);
+            });
         }
 
         function startTimer() {
             let timeLeft = timeLimit;
             timerBar.style.transition = 'none';
             timerBar.style.width = '100%';
-            timerBar.classList.remove('bg-red-500');
-            timerBar.classList.add('bg-green-500');
+            timerBar.className = 'timer-bar bg-green-500 h-2 w-full';
             
-            void timerBar.offsetWidth;
+            void timerBar.offsetWidth; // Trigger reflow
 
             timerBar.style.transition = `width ${timeLimit}s linear`;
             timerBar.style.width = '0%';
@@ -308,22 +412,50 @@
                 }
                 if (timeLeft < 0) {
                     clearInterval(timerInterval);
-                    checkAnswer(true);
+                    handleTimeOut();
                 }
             }, 1000);
         }
 
-        function checkAnswer(isTimeout = false) {
-            console.log("Hi")
+        // --- CHECKING LOGIC ---
+
+        function handleTimeOut() {
+             showFeedback(false, true); // Sai do hết giờ
+        }
+
+        function checkAnswerInput() {
             clearInterval(timerInterval);
             timerBar.style.transition = 'none';
             
             const currentQ = quizQuestions[currentIndex];
-            const userAnswer = answerInput.value.trim(); // Trim khoảng trắng thừa
-            const correctAnswer = currentQ.answer;
+            const userAnswer = answerInput.value.trim();
+            const isCorrect = (userAnswer === currentQ.answer); // Case sensitive check
+            
+            showFeedback(isCorrect);
+        }
 
-            const isCorrect = (userAnswer === correctAnswer);
+        function checkAnswerMCQ(selectedVal, btnElement) {
+            clearInterval(timerInterval);
+            timerBar.style.transition = 'none';
+            
+            const currentQ = quizQuestions[currentIndex];
+            const isCorrect = (selectedVal === currentQ.answer);
 
+            // Highlight nút vừa chọn
+            if (isCorrect) {
+                btnElement.classList.add('bg-green-500', 'text-white', 'border-green-600');
+            } else {
+                btnElement.classList.add('bg-red-500', 'text-white', 'border-red-600');
+            }
+            
+            // Disable tất cả nút
+            const allBtns = mcqArea.querySelectorAll('button');
+            allBtns.forEach(b => b.disabled = true);
+
+            showFeedback(isCorrect);
+        }
+
+        function showFeedback(isCorrect, isTimeout = false) {
             if (isCorrect) {
                 score++;
                 feedbackMessage.innerText = "CHÍNH XÁC!";
@@ -331,21 +463,22 @@
             } else {
                 feedbackMessage.innerText = isTimeout ? "HẾT GIỜ!" : "SAI RỒI!";
                 feedbackMessage.className = "text-2xl font-black text-red-600 tracking-tight";
-                
-                // Hiệu ứng rung màn hình khi sai
                 screens.quiz.classList.add('shake');
             }
 
-            inputArea.classList.add('hidden');
+            // Ẩn input, hiện feedback
+            inputArea.classList.add('hidden'); // Ẩn cả 2 area rồi mới hiện feedback
+            mcqArea.classList.add('hidden');
+            
             feedbackArea.classList.remove('hidden');
-            correctAnswerDisplay.innerText = correctAnswer;
+            correctAnswerDisplay.innerText = quizQuestions[currentIndex].answer;
             
             isFeedbackMode = true;
-            //nextBtn.focus(); // Focus vào nút next để tiện bấm phím Space/Enter nếu muốn
+            // Xóa focus khỏi nextBtn để tránh lỗi double enter cũ
+            nextBtn.blur();
         }
 
         function nextQuestion() {
-            console.log("next q")
             URL.revokeObjectURL(quizImage.src);
             currentIndex++;
             loadQuestion();
@@ -355,15 +488,9 @@
             showScreen('result');
             document.getElementById('score-correct').innerText = score;
             document.getElementById('score-wrong').innerText = quizQuestions.length - score;
-            
-            let final = 0;
-            if (quizQuestions.length > 0) {
-                final = (score / quizQuestions.length * 10).toFixed(1);
-            }
+            let final = quizQuestions.length > 0 ? (score / quizQuestions.length * 10).toFixed(1) : 0;
             document.getElementById('final-score').innerText = final;
         }
-        
-
     </script>
 </body>
 </html>
