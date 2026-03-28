@@ -1,10 +1,14 @@
-/* Tùy chỉnh nhẹ cho các nút công cụ */
+/* Tùy chỉnh cho các nút công cụ */
 .tool-btn {
-    @apply border border-gray-300 bg-gray-50 text-gray-700 py-2 px-1 rounded text-sm hover:bg-gray-100 transition-colors flex items-center justify-center gap-1;
+    @apply border border-gray-300 bg-white text-gray-700 py-3 px-1 rounded-lg hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 transition-all duration-150 flex items-center justify-center gap-1.5 shadow-sm font-medium active:scale-95;
 }
 
-/* Giúp vùng chứa canvas có bóng đổ nhìn giống tờ giấy/app thật */
-.canvas-container {
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    background-color: white;
+/* Ẩn cái viền đen mặc định của input color trên Chrome */
+input[type="color"]::-webkit-color-swatch-wrapper {
+	padding: 0;
+}
+input[type="color"]::-webkit-color-swatch {
+	border: none;
+    border-radius: 6px;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.1);
 }

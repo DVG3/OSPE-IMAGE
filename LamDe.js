@@ -2,15 +2,17 @@
 let canvas;
 let imageFiles = [];
 let currentIndex = -1;
+let currentEditorColor = '#ff0000'; // Màu mặc định (Đỏ)
 
 // Khởi tạo Fabric Canvas khi tải trang
 window.onload = () => {
     canvas = new fabric.Canvas('mainCanvas', {
-        fireRightClick: true,  // Bật tính năng nhận diện chuột phải
-        stopContextMenu: true  // Chặn menu chuột phải mặc định của trình duyệt hiện lên canvas
+        fireRightClick: true,  // Bật chuột phải
+        stopContextMenu: true  // Chặn menu chuột phải mặc định
     });
     setupKeyboardEvents();
-    setupMouseTouchEvents(); // Thêm sự kiện chuột phải / ấn giữ
+    setupMouseTouchEvents(); 
+    setupColorPickerEvent(); // THÊM MỚI: Khởi tạo sự kiện chọn màu
 };
 
 // --- DOM Elements ---
@@ -20,6 +22,7 @@ const btnPrev = document.getElementById('btnPrev');
 const btnNext = document.getElementById('btnNext');
 const imageCounter = document.getElementById('imageCounter');
 const fileNameInput = document.getElementById('fileNameInput');
+const colorPicker = document.getElementById('colorPicker'); // THÊM MỚI
 
 // --- Xử lý tải thư mục ---
 folderInput.addEventListener('change', (e) => {
@@ -36,7 +39,7 @@ function renderFileList() {
     fileList.innerHTML = '';
     imageFiles.forEach((file, index) => {
         const item = document.createElement('div');
-        item.className = `p-2 text-sm cursor-pointer truncate rounded mb-1 ${index === currentIndex ? 'bg-blue-100 text-blue-700 font-bold' : 'hover:bg-gray-100'}`;
+        item.className = `p-2.5 text-sm cursor-pointer truncate rounded-lg mb-1 transition ${index === currentIndex ? 'bg-blue-100 text-blue-800 font-bold shadow-inner' : 'hover:bg-gray-100 text-gray-700'}`;
         item.textContent = file.name;
         item.onclick = () => loadImage(index);
         fileList.appendChild(item);
@@ -46,6 +49,11 @@ function renderFileList() {
 // --- Load ảnh lên Canvas ---
 function loadImage(index) {
     if (index < 0 || index >= imageFiles.length) return;
+    
+    // Cập nhật trạng thái disable của nút Trước/Sau
+    btnPrev.disabled = (index === 0);
+    btnNext.disabled = (index === imageFiles.length - 1);
+
     currentIndex = index;
     
     const file = imageFiles[currentIndex];
@@ -59,6 +67,7 @@ function loadImage(index) {
     reader.onload = function(f) {
         fabric.Image.fromURL(f.target.result, function(img) {
             canvas.clear(); 
+            // Giới hạn hiển thị đẹp trong khung 800x600
             const maxWidth = 800;
             const maxHeight = 600;
             const scale = Math.min(maxWidth / img.width, maxHeight / img.height, 1);
@@ -76,35 +85,67 @@ function loadImage(index) {
 btnPrev.addEventListener('click', () => loadImage(currentIndex - 1));
 btnNext.addEventListener('click', () => loadImage(currentIndex + 1));
 
-// --- Các hàm thêm Công cụ ---
-const defaultOptions = { left: 50, top: 50, strokeWidth: 3, fill: 'transparent', stroke: 'red' };
+// --- THÊM MỚI: Xử lý sự kiện Chọn Màu Sắc ---
+function setupColorPickerEvent() {
+    // Lấy màu mặc định lúc load trang từ input HTML
+    currentEditorColor = colorPicker.value;
+
+    // Sự kiện khi người dùng thay đổi màu trong hộp thoại
+    colorPicker.addEventListener('input', (e) => {
+        currentEditorColor = e.target.value; // Cập nhật màu hiện tại
+
+        // NÂNG CAO: Nếu đang chọn 1 đối tượng, đổi màu đối tượng đó ngay lập tức
+        const activeObject = canvas.getActiveObject();
+        if (activeObject) {
+            // Nếu là Text hoặc vật thể có Fill (Hình đặc)
+            if (activeObject.type === 'i-text' || activeObject.fill !== 'transparent') {
+                 // Nếu hình đặc, thường ta chỉ đổi màu fill, stroke giữ nguyên hoặc bỏ
+                activeObject.set({ fill: currentEditorColor });
+            } 
+            // Nếu là vật thể Rỗng (chỉ có viền) hoặc Mũi tên (Path)
+            else {
+                activeObject.set({ stroke: currentEditorColor });
+            }
+            canvas.renderAll(); // Vẽ lại canvas
+        }
+    });
+}
+
+// --- CẬP NHẬT: Các hàm thêm Công cụ (Sử dụng currentEditorColor) ---
+const getHollowOptions = () => ({ 
+    left: 100, top: 100, strokeWidth: 4, fill: 'transparent', stroke: currentEditorColor 
+});
+const getFillOptions = () => ({ 
+    left: 100, top: 100, fill: currentEditorColor, stroke: 'transparent'
+});
 
 document.getElementById('btnAddText').onclick = () => {
     const text = new fabric.IText('Nhập chữ...', {
-        left: 50, top: 50, fontFamily: 'Arial', fill: 'red', fontSize: 24, fontWeight: 'bold'
+        left: 100, top: 100, fontFamily: 'Arial', fill: currentEditorColor, fontSize: 26, fontWeight: 'bold'
     });
     canvas.add(text).setActiveObject(text);
 };
 
 document.getElementById('btnRectHollow').onclick = () => {
-    canvas.add(new fabric.Rect({ ...defaultOptions, width: 100, height: 100 }));
+    canvas.add(new fabric.Rect({ ...getHollowOptions(), width: 120, height: 100 }));
 };
 
 document.getElementById('btnRectFill').onclick = () => {
-    canvas.add(new fabric.Rect({ left: 50, top: 50, width: 100, height: 100, fill: 'red' }));
+    canvas.add(new fabric.Rect({ ...getFillOptions(), width: 120, height: 100 }));
 };
 
 document.getElementById('btnCircleHollow').onclick = () => {
-    canvas.add(new fabric.Circle({ ...defaultOptions, radius: 50 }));
+    canvas.add(new fabric.Circle({ ...getHollowOptions(), radius: 55 }));
 };
 
 document.getElementById('btnCircleFill').onclick = () => {
-    canvas.add(new fabric.Circle({ left: 50, top: 50, radius: 50, fill: 'red' }));
+    canvas.add(new fabric.Circle({ ...getFillOptions(), radius: 55 }));
 };
 
 document.getElementById('btnAddArrow').onclick = () => {
-    const arrow = new fabric.Path('M 0 0 L 60 0 M 60 0 L 45 -15 M 60 0 L 45 15', {
-        ...defaultOptions, stroke: 'red', strokeWidth: 4, fill: 'transparent'
+    // Vẽ mũi tên bằng Path, sử dụng currentEditorColor cho nét vẽ (stroke)
+    const arrow = new fabric.Path('M 0 0 L 70 0 M 70 0 L 52 -18 M 70 0 L 52 18', {
+        ...getHollowOptions(), stroke: currentEditorColor, strokeWidth: 5, left: 100, top: 100
     });
     canvas.add(arrow);
 };
@@ -122,26 +163,16 @@ function setupKeyboardEvents() {
 // --- Xử lý sự kiện Xóa (Chuột phải & Ấn giữ mobile) ---
 function setupMouseTouchEvents() {
     let pressTimer;
-
     canvas.on('mouse:down', function(options) {
         const target = options.target;
         if (!target) return;
-
-        // Chuột phải (Fabric JS quy định button === 3 là chuột phải)
-        if (options.button === 3) {
-            canvas.remove(target);
-            canvas.discardActiveObject();
-            return;
+        if (options.button === 3) { // Chuột phải
+            canvas.remove(target); canvas.discardActiveObject(); return;
         }
-
-        // Bắt đầu đếm thời gian ấn giữ (Long press) cho màn hình cảm ứng
-        pressTimer = setTimeout(() => {
-            canvas.remove(target);
-            canvas.discardActiveObject();
-        }, 800); // Giữ 800ms sẽ kích hoạt xóa
+        pressTimer = setTimeout(() => { // Long press
+            canvas.remove(target); canvas.discardActiveObject();
+        }, 800); 
     });
-
-    // Nếu người dùng nhả chuột/tay ra, hoặc bắt đầu kéo thả di chuyển vật thể -> Hủy lệnh xóa
     canvas.on('mouse:up', () => clearTimeout(pressTimer));
     canvas.on('mouse:move', () => clearTimeout(pressTimer));
 }
@@ -157,84 +188,42 @@ function deleteActiveObjects() {
 // --- Hàm tạo chuỗi thời gian định dạng YYYYMMDD_HHMMSS ---
 function getFormattedTime() {
     const now = new Date();
-    const yyyy = now.getFullYear();
-    const mm = String(now.getMonth() + 1).padStart(2, '0');
-    const dd = String(now.getDate()).padStart(2, '0');
-    const hh = String(now.getHours()).padStart(2, '0');
-    const min = String(now.getMinutes()).padStart(2, '0');
-    const ss = String(now.getSeconds()).padStart(2, '0');
-    return `${yyyy}${mm}${dd}_${hh}${min}${ss}`;
+    return `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`;
 }
 
 // --- Xuất (Lưu) ảnh và File System Access API ---
 let saveDirectoryHandle = null;
 
-// Xử lý nút chọn thư mục lưu
 document.getElementById('btnSelectSaveDir').addEventListener('click', async () => {
     try {
-        // Mở hộp thoại chọn thư mục và xin quyền ghi
         saveDirectoryHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
-        
-        // Hiển thị tên thư mục đã chọn lên UI
         const statusEl = document.getElementById('saveDirStatus');
-        statusEl.textContent = `📁 Đang lưu tại: ${saveDirectoryHandle.name}`;
+        statusEl.textContent = `📁 Lưu tại: ${saveDirectoryHandle.name}`;
         statusEl.classList.remove('hidden');
-    } catch (error) {
-        console.log('Người dùng hủy chọn hoặc trình duyệt không hỗ trợ:', error);
-    }
+    } catch (error) { console.log('Hủy hoặc không hỗ trợ:', error); }
 });
 
-// Xử lý nút Lưu ảnh
 document.getElementById('btnDownload').addEventListener('click', async () => {
     if (!canvas || imageFiles.length === 0) return;
-    
-    const baseFileName = fileNameInput.value.trim() || 'edited_image';
-    const timestamp = getFormattedTime();
-    const finalFileName = `${baseFileName}_${timestamp}.png`;
-    
-    // Bỏ chọn đối tượng trước khi lưu
-    canvas.discardActiveObject();
-    canvas.renderAll();
-
-    // Lấy dữ liệu ảnh từ canvas
+    const finalFileName = `${fileNameInput.value.trim() || 'edited'}_${getFormattedTime()}.png`;
+    canvas.discardActiveObject(); canvas.renderAll();
     const dataURL = canvas.toDataURL({ format: 'png', quality: 1 });
 
-    // CÁCH 1: Dùng File System Access API để lưu thẳng vào thư mục đã chọn
+    // CÁCH 1: Lưu thẳng vào thư mục (Chrome/Edge)
     if (saveDirectoryHandle) {
         try {
-            // Chuyển dataURL thành Blob để ghi file
-            const response = await fetch(dataURL);
-            const blob = await response.blob();
-
-            // Tạo file mới trong thư mục đã chọn
-            const fileHandle = await saveDirectoryHandle.getFileHandle(finalFileName, { create: true });
+            const blob = await (await fetch(dataURL)).blob();
+            const writable = await (await saveDirectoryHandle.getFileHandle(finalFileName, { create: true })).createWritable();
+            await writable.write(blob); await writable.close();
             
-            // Ghi dữ liệu vào file
-            const writable = await fileHandle.createWritable();
-            await writable.write(blob);
-            await writable.close();
-            
-            // Đổi màu nút chớp nháy nhẹ để báo hiệu lưu thành công
             const btn = document.getElementById('btnDownload');
-            const originalText = btn.textContent;
-            btn.textContent = "✅ Đã lưu!";
-            btn.classList.add('bg-green-600');
-            setTimeout(() => {
-                btn.textContent = originalText;
-                btn.classList.remove('bg-green-600');
-            }, 1000);
-            return; // Kết thúc hàm nếu đã lưu thành công
-        } catch (err) {
-            console.error("Lỗi khi ghi file vào thư mục:", err);
-            // Nếu lỗi (ví dụ mất quyền), sẽ tự động chạy xuống Cách 2
-        }
+            btn.textContent = "✅ Đã lưu xong!"; btn.classList.replace('bg-blue-600', 'bg-green-600');
+            setTimeout(() => { btn.textContent = "Lưu ảnh hiện tại"; btn.classList.replace('bg-green-600', 'bg-blue-600'); }, 1000);
+            return;
+        } catch (err) { console.error("Lỗi ghi file:", err); }
     }
 
-    // CÁCH 2: Fallback - Tải xuống theo kiểu truyền thống (vào mục Downloads)
-    const link = document.createElement('a');
-    link.href = dataURL;
-    link.download = finalFileName;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // CÁCH 2: Fallback - Tải xuống mặc định
+    const link = document.createElement('a'); link.href = dataURL; link.download = finalFileName;
+    document.body.appendChild(link); link.click(); document.body.removeChild(link);
 });
