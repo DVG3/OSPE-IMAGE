@@ -1,0 +1,84 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Be Vietnam Pro', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Baloo 2', 'Be Vietnam Pro', sans-serif;
+
+  --color-cream: #fbf3de;
+  --color-nb-yellow: #ffdc58;
+  --color-nb-pink: #ff90e8;
+  --color-nb-cyan: #6de4e7;
+  --color-nb-lime: #b5f56e;
+  --color-nb-blue: #4d7cff;
+  --color-nb-red: #ff6b6b;
+}
+
+@keyframes shake {
+  0% { transform: translate(1px, 1px) rotate(0deg); }
+  10% { transform: translate(-2px, -2px) rotate(-1deg); }
+  30% { transform: translate(4px, 2px) rotate(0deg); }
+  50% { transform: translate(-2px, 2px) rotate(-1deg); }
+  70% { transform: translate(4px, 1px) rotate(-1deg); }
+  100% { transform: translate(1px, -2px) rotate(-1deg); }
+}
+
+.animate-shake {
+  animation: shake 0.5s;
+}
+
+:focus-visible {
+  outline: 3px solid #000;
+  outline-offset: 2px;
+}
+
+/* Neobrutalism building blocks.
+    Wrapped in @layer components so per-element Tailwind utilities
+    (bg-nb-blue, text-white, rounded-full, ...) override the base style. */
+@layer components {
+  .nb-card {
+    @apply border-2 border-black bg-white shadow-[4px_4px_0_#000];
+  }
+
+  .nb-btn {
+    @apply inline-flex items-center justify-center gap-2 border-2 border-black bg-white font-bold transition-all duration-100 shadow-[3px_3px_0_#000];
+  }
+  .nb-btn:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: 5px 5px 0 #000;
+  }
+  .nb-btn:active {
+    transform: translate(2px, 2px);
+    box-shadow: 0 0 0 #000;
+  }
+  .nb-btn:disabled {
+    opacity: 0.4;
+    transform: none;
+    box-shadow: 3px 3px 0 #000;
+    cursor: not-allowed;
+  }
+
+  .nb-input {
+    @apply border-2 border-black bg-white px-3 py-2 font-bold focus:outline-none focus:ring-4 focus:ring-nb-yellow;
+  }
+
+  .tool-btn {
+    @apply inline-flex items-center justify-center gap-1.5 border-2 border-black bg-white text-gray-800 py-3 px-1 rounded-lg shadow-[3px_3px_0_#000] transition-all duration-100 cursor-pointer select-none;
+  }
+  .tool-btn:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: 5px 5px 0 #000;
+  }
+  .tool-btn:active {
+    transform: translate(2px, 2px);
+    box-shadow: 0 0 0 #000;
+  }
+}
+
+input[type="color"]::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+input[type="color"]::-webkit-color-swatch {
+  border: none;
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 2px #000;
+}
