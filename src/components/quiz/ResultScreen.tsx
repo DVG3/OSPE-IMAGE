@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import type { WrongAnswer } from '../../hooks/useQuizEngine';
+import type { WorkspaceWrongAnswer } from '../../hooks/useWorkspaceQuizEngine';
 
 interface Props {
   correct: number;
   total: number;
-  wrongAnswers: WrongAnswer[];
+  wrongAnswers?: WrongAnswer[];
+  workspaceWrongAnswers?: WorkspaceWrongAnswer[];
   onReset: () => void;
 }
 
@@ -25,9 +27,18 @@ function ReviewThumb({ file }: { file: File }) {
   );
 }
 
-export default function ResultScreen({ correct, total, wrongAnswers, onReset }: Props) {
+export default function ResultScreen({
+  correct,
+  total,
+  wrongAnswers = [],
+  workspaceWrongAnswers = [],
+  onReset,
+}: Props) {
   const wrong = total - correct;
   const finalScore = total > 0 ? ((correct / total) * 10).toFixed(1) : '0';
+
+  const hasFlashcardWrong = wrongAnswers && wrongAnswers.length > 0;
+  const hasWorkspaceWrong = workspaceWrongAnswers && workspaceWrongAnswers.length > 0;
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-8 gap-6 overflow-y-auto">
@@ -48,7 +59,7 @@ export default function ResultScreen({ correct, total, wrongAnswers, onReset }: 
         <span className="font-display text-xl">/10</span>
       </div>
 
-      {wrongAnswers.length > 0 && (
+      {hasFlashcardWrong && (
         <div className="w-full max-w-xl space-y-2">
           <h3 className="font-display text-lg uppercase tracking-wide">Xem lại câu sai</h3>
           <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
@@ -61,6 +72,48 @@ export default function ResultScreen({ correct, total, wrongAnswers, onReset }: 
                       Đúng
                     </span>
                     <span className="text-sm font-bold truncate">{w.image.answer}</span>
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span
+                      className={`text-[10px] font-bold uppercase border-2 border-black px-1.5 rounded ${
+                        w.given === null ? 'bg-nb-yellow' : 'bg-nb-red text-white'
+                      }`}
+                    >
+                      {w.given === null ? 'Hết giờ' : 'Bạn đã chọn'}
+                    </span>
+                    <span className="text-sm truncate line-through decoration-nb-red decoration-2">
+                      {w.given === null ? '—' : w.given}
+                    </span>
+                  </div>
+                </div>
+                <QuestionNumber n={i + 1} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {hasWorkspaceWrong && (
+        <div className="w-full max-w-xl space-y-2">
+          <h3 className="font-display text-lg uppercase tracking-wide">Xem lại câu sai</h3>
+          <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+            {workspaceWrongAnswers.map((w, i) => (
+              <div key={i} className="nb-card rounded-lg p-2 flex items-center gap-3">
+                <ReviewThumb file={w.question.imageFile} />
+                <div className="flex-1 min-w-0 space-y-1">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[10px] font-mono bg-black text-white px-1.5 py-0.2 rounded">
+                      {w.question.kind === 'classify' ? 'Phân loại' : 'Chọn cấu trúc'}
+                    </span>
+                    <span className="text-[10px] text-gray-500 font-semibold truncate">
+                      ({w.question.workspaceName})
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-[10px] font-bold uppercase bg-nb-lime border-2 border-black px-1.5 rounded">
+                      Đúng
+                    </span>
+                    <span className="text-sm font-bold truncate">{w.question.targetCaptionName}</span>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
                     <span

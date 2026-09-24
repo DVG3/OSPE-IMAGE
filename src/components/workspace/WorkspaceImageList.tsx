@@ -16,6 +16,8 @@ interface WorkspaceImageListProps {
   currentFileName: string | null;
   onSelectImage: (workspaceId: string, fileName: string) => void;
   onLoadWorkspace: () => void;
+  onRenameImage?: (workspaceId: string, fileName: string, newName: string) => void;
+  onDeleteImage?: (workspaceId: string, fileName: string) => void;
 }
 
 export default function WorkspaceImageList({
@@ -24,6 +26,8 @@ export default function WorkspaceImageList({
   currentFileName,
   onSelectImage,
   onLoadWorkspace,
+  onRenameImage,
+  onDeleteImage,
 }: WorkspaceImageListProps) {
   // Aggregate images from all visible workspaces
   const allImages = useMemo(() => {
@@ -97,11 +101,10 @@ export default function WorkspaceImageList({
             const hasDuplicateName = (nameCounts[item.fileName] || 0) > 1;
 
             return (
-              <button
-                type="button"
+              <div
                 key={`${item.workspaceId}_${item.fileName}`}
                 onClick={() => onSelectImage(item.workspaceId, item.fileName)}
-                className={`w-full text-left p-2 rounded-lg border-2 transition-all flex items-center gap-2 relative overflow-hidden ${
+                className={`group w-full text-left p-2 rounded-lg border-2 transition-all flex items-center justify-between gap-2 relative overflow-hidden cursor-pointer ${
                   isSelected
                     ? 'border-black shadow-[3px_3px_0_#000] ring-2 ring-black'
                     : 'border-black/30 hover:border-black bg-white hover:bg-cream/40'
@@ -111,26 +114,59 @@ export default function WorkspaceImageList({
                   borderColor: isSelected ? '#000' : undefined,
                 }}
               >
-                {/* Workspace Indicator Strip */}
-                <div
-                  className="w-1.5 self-stretch rounded-full flex-shrink-0"
-                  style={{ backgroundColor: item.workspaceColor }}
-                />
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  {/* Workspace Indicator Strip */}
+                  <div
+                    className="w-1.5 self-stretch rounded-full flex-shrink-0"
+                    style={{ backgroundColor: item.workspaceColor }}
+                  />
 
-                <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-xs truncate text-gray-900">
-                    {item.fileName}
-                    {hasDuplicateName && (
-                      <span className="text-[10px] text-gray-500 ml-1 font-normal">
-                        ({item.workspaceName})
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 mt-0.5 text-[10px] text-gray-500">
-                    <span>{item.objectCount} đánh dấu</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-xs truncate text-gray-900">
+                      {item.fileName}
+                      {hasDuplicateName && (
+                        <span className="text-[10px] text-gray-500 ml-1 font-normal">
+                          ({item.workspaceName})
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 mt-0.5 text-[10px] text-gray-500">
+                      <span>{item.objectCount} đánh dấu</span>
+                    </div>
                   </div>
                 </div>
-              </button>
+
+                {/* Actions */}
+                <div className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5 transition-opacity flex-shrink-0">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const newName = window.prompt('Nhập tên mới cho ảnh:', item.fileName);
+                      if (newName && onRenameImage) {
+                        onRenameImage(item.workspaceId, item.fileName, newName);
+                      }
+                    }}
+                    title="Đổi tên ảnh"
+                    className="p-1 rounded hover:bg-black/10 text-gray-700 hover:text-black"
+                  >
+                    ✏️
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (onDeleteImage) {
+                        onDeleteImage(item.workspaceId, item.fileName);
+                      }
+                    }}
+                    title="Xóa ảnh"
+                    className="p-1 rounded hover:bg-red-100 text-red-600 hover:text-red-800"
+                  >
+                    🗑️
+                  </button>
+                </div>
+              </div>
             );
           })
         )}

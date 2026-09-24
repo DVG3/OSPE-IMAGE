@@ -26,6 +26,7 @@ interface WorkspaceCanvasProps {
   brushSize: number;
   eraserSize: number;
   dotRadius: number;
+  globalDotOpacity: number;
   reviewDisplayMode: ReviewDisplayMode;
   reviewFontSize: number;
   selectedItems: SelectedLayerItem[];
@@ -50,6 +51,7 @@ export default function WorkspaceCanvas({
   brushSize,
   eraserSize,
   dotRadius,
+  globalDotOpacity = 100,
   reviewDisplayMode,
   reviewFontSize,
   selectedItems,
@@ -79,7 +81,7 @@ export default function WorkspaceCanvas({
   // Drawing state
   const isDrawingRef = useRef(false);
   const currentPathRef = useRef<Point2D[]>([]);
-  const draggingDotRef = useRef<{ id: string; isResizing: boolean } | null>(null);
+  const draggingDotRef = useRef<{ id: string } | null>(null);
   const cursorPosRef = useRef<Point2D | null>(null);
 
   // Canvas context menu state
@@ -280,18 +282,9 @@ export default function WorkspaceCanvas({
       if (obj.type === 'dot') {
         const x = obj.x ?? 0;
         const y = obj.y ?? 0;
-        const r = obj.radius ?? 35;
 
-        // Circular boundary (dashed ring)
-        ctx.beginPath();
-        ctx.arc(x, y, r, 0, Math.PI * 2);
-        ctx.strokeStyle = selected ? '#0891b2' : `${drawColor}aa`;
-        ctx.lineWidth = (selected ? 3 : 2) / zoom;
-        ctx.setLineDash([6 / zoom, 4 / zoom]);
-        ctx.fillStyle = `${drawColor}15`; // faint fill inside boundary
-        ctx.fill();
-        ctx.stroke();
-        ctx.setLineDash([]);
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, Math.min(1, globalDotOpacity / 100));
 
         // Center dot
         ctx.beginPath();
@@ -302,16 +295,16 @@ export default function WorkspaceCanvas({
         ctx.lineWidth = 2 / zoom;
         ctx.stroke();
 
-        // If selected in edit mode: draw resize handle on boundary edge
-        if (selected && mode === 'edit') {
+        // If selected: draw neat indicator ring
+        if (selected) {
           ctx.beginPath();
-          ctx.arc(x + r, y, 5 / zoom, 0, Math.PI * 2);
-          ctx.fillStyle = '#ffffff';
-          ctx.strokeStyle = '#000000';
-          ctx.lineWidth = 2 / zoom;
-          ctx.fill();
+          ctx.arc(x, y, 12 / zoom, 0, Math.PI * 2);
+          ctx.strokeStyle = '#0891b2';
+          ctx.lineWidth = 2.5 / zoom;
           ctx.stroke();
         }
+
+        ctx.restore();
       } else if (obj.type === 'highlight') {
         // Draw highlight strokes
         if (obj.paths && obj.paths.length > 0) {
@@ -455,6 +448,7 @@ export default function WorkspaceCanvas({
     color,
     brushSize,
     eraserSize,
+    globalDotOpacity,
     reviewDisplayMode,
     reviewFontSize,
   ]);
@@ -487,7 +481,7 @@ export default function WorkspaceCanvas({
         const clicked = [...annotationData.objects].reverse().find((obj) => {
           if (!isObjectVisible(obj)) return false;
           if (obj.type === 'dot') {
-            return distance(coords, { x: obj.x ?? 0, y: obj.y ?? 0 }) <= (obj.radius ?? 35);
+            return distance(coords, { x: obj.x ?? 0, y: obj.y ?? 0 }) <= Math.max(14 / zoom, 12);
           }
           if (obj.type === 'highlight' && obj.paths) {
             return obj.paths.some((p) => p.some((pt) => distance(coords, pt) <= (obj.strokeWidth ?? 20) / 2));
@@ -523,7 +517,7 @@ export default function WorkspaceCanvas({
       const clicked = [...annotationData.objects].reverse().find((obj) => {
         if (!isObjectVisible(obj)) return false;
         if (obj.type === 'dot') {
-          return distance(coords, { x: obj.x ?? 0, y: obj.y ?? 0 }) <= (obj.radius ?? 35);
+          return distance(coords, { x: obj.x ?? 0, y: obj.y ?? 0 }) <= Math.max(14 / zoom, 12);
         }
         if (obj.type === 'highlight' && obj.paths) {
           return obj.paths.some((p) => p.some((pt) => distance(coords, pt) <= (obj.strokeWidth ?? 20) / 2));
@@ -541,25 +535,11 @@ export default function WorkspaceCanvas({
 
     // In Edit Mode:
     if (activeTool === 'select') {
-      // Check if clicked on a selected Dot's resize handle
-      const selectedDot = annotationData.objects.find(
-        (o) => o.type === 'dot' && selectedItems.some((s) => s.type === 'object' && s.id === o.id)
-      );
-
-      if (selectedDot) {
-        const handleX = (selectedDot.x ?? 0) + (selectedDot.radius ?? 35);
-        const handleY = selectedDot.y ?? 0;
-        if (distance(coords, { x: handleX, y: handleY }) <= 14 / zoom) {
-          draggingDotRef.current = { id: selectedDot.id, isResizing: true };
-          return;
-        }
-      }
-
       // Check if clicked on any object
       const clicked = [...annotationData.objects].reverse().find((obj) => {
         if (!isObjectVisible(obj)) return false;
         if (obj.type === 'dot') {
-          return distance(coords, { x: obj.x ?? 0, y: obj.y ?? 0 }) <= (obj.radius ?? 35);
+          return distance(coords, { x: obj.x ?? 0, y: obj.y ?? 0 }) <= Math.max(14 / zoom, 12);
         }
         if (obj.type === 'highlight' && obj.paths) {
           return obj.paths.some((p) => p.some((pt) => distance(coords, pt) <= (obj.strokeWidth ?? 20) / 2));
@@ -570,7 +550,7 @@ export default function WorkspaceCanvas({
       if (clicked) {
         onSelectItems([{ type: 'object', id: clicked.id }]);
         if (clicked.type === 'dot') {
-          draggingDotRef.current = { id: clicked.id, isResizing: false };
+          draggingDotRef.current = { id: clicked.id };
         }
       } else {
         onSelectItems([]);
@@ -579,30 +559,16 @@ export default function WorkspaceCanvas({
         panStartRef.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
       }
     } else if (activeTool === 'dot') {
-      // 1. First check if clicking on the resize handle of a selected Dot
-      const selectedDot = annotationData.objects.find(
-        (o) => o.type === 'dot' && selectedItems.some((s) => s.type === 'object' && s.id === o.id)
-      );
-
-      if (selectedDot) {
-        const handleX = (selectedDot.x ?? 0) + (selectedDot.radius ?? 35);
-        const handleY = selectedDot.y ?? 0;
-        if (distance(coords, { x: handleX, y: handleY }) <= 14 / zoom) {
-          draggingDotRef.current = { id: selectedDot.id, isResizing: true };
-          return;
-        }
-      }
-
-      // 2. Check if clicking inside ANY existing Dot's circular boundary
+      // Check if clicking on ANY existing Dot
       const existingDot = [...annotationData.objects].reverse().find((obj) => {
         if (!isObjectVisible(obj) || obj.type !== 'dot') return false;
-        return distance(coords, { x: obj.x ?? 0, y: obj.y ?? 0 }) <= (obj.radius ?? 35);
+        return distance(coords, { x: obj.x ?? 0, y: obj.y ?? 0 }) <= Math.max(14 / zoom, 12);
       });
 
       if (existingDot) {
-        // Select and allow dragging or resizing this existing dot!
+        // Select and allow dragging this existing dot
         onSelectItems([{ type: 'object', id: existingDot.id }]);
-        draggingDotRef.current = { id: existingDot.id, isResizing: false };
+        draggingDotRef.current = { id: existingDot.id };
         return;
       }
 
@@ -668,19 +634,13 @@ export default function WorkspaceCanvas({
     const coords = screenToImageCoords(e.clientX, e.clientY);
     cursorPosRef.current = coords;
 
-    // Dragging dot center or resizing dot boundary
+    // Dragging dot center
     if (draggingDotRef.current) {
       const dotId = draggingDotRef.current.id;
-      const isResizing = draggingDotRef.current.isResizing;
 
       const updatedObjects = annotationData.objects.map((obj) => {
         if (obj.id === dotId && obj.type === 'dot') {
-          if (isResizing) {
-            const newRadius = Math.max(10, distance({ x: obj.x ?? 0, y: obj.y ?? 0 }, coords));
-            return { ...obj, radius: Math.round(newRadius) };
-          } else {
-            return { ...obj, x: Math.round(coords.x), y: Math.round(coords.y) };
-          }
+          return { ...obj, x: Math.round(coords.x), y: Math.round(coords.y) };
         }
         return obj;
       });
@@ -836,24 +796,6 @@ export default function WorkspaceCanvas({
       return;
     }
 
-    // 3. If selecting a dot, scroll wheel resizes its radius in select or dot tool
-    const selectedDot = annotationData.objects.find(
-      (o) => o.type === 'dot' && selectedItems.some((s) => s.type === 'object' && s.id === o.id)
-    );
-
-    if (selectedDot && (activeTool === 'select' || activeTool === 'dot') && !e.ctrlKey) {
-      e.preventDefault();
-      const delta = e.deltaY < 0 ? 3 : -3;
-      const newRadius = Math.max(10, Math.min(250, (selectedDot.radius ?? 35) + delta));
-      onUpdateAnnotation({
-        ...annotationData,
-        objects: annotationData.objects.map((o) =>
-          o.id === selectedDot.id ? { ...o, radius: newRadius } : o
-        ),
-      });
-      return;
-    }
-
     // Default: zoom in/out centered around cursor
     e.preventDefault();
     if (!containerRef.current) return;
@@ -901,7 +843,7 @@ export default function WorkspaceCanvas({
     const clicked = [...annotationData.objects].reverse().find((obj) => {
       if (!isObjectVisible(obj)) return false;
       if (obj.type === 'dot') {
-        return distance(coords, { x: obj.x ?? 0, y: obj.y ?? 0 }) <= (obj.radius ?? 35);
+        return distance(coords, { x: obj.x ?? 0, y: obj.y ?? 0 }) <= Math.max(14 / zoom, 12);
       }
       if (obj.type === 'highlight' && obj.paths) {
         return obj.paths.some((p) => p.some((pt) => distance(coords, pt) <= (obj.strokeWidth ?? 20) / 2));

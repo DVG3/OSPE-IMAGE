@@ -6,6 +6,8 @@ interface WorkspaceFileTreeProps {
   currentWorkspaceId: string | null;
   currentRelPath: string | null;
   onSelectImage: (workspaceId: string, relPath: string) => void;
+  onRenameImage?: (workspaceId: string, relPath: string, newName: string) => void;
+  onDeleteImage?: (workspaceId: string, relPath: string) => void;
 }
 
 interface TreeNode {
@@ -22,6 +24,8 @@ export default function WorkspaceFileTree({
   currentWorkspaceId,
   currentRelPath,
   onSelectImage,
+  onRenameImage,
+  onDeleteImage,
 }: WorkspaceFileTreeProps) {
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
 
@@ -159,7 +163,7 @@ export default function WorkspaceFileTree({
       <div
         key={currentPathKey}
         onClick={() => onSelectImage(workspaceId, node.relPath)}
-        className={`flex items-center justify-between py-1 px-2 rounded cursor-pointer select-none text-xs transition-all border ${
+        className={`group flex items-center justify-between py-1 px-2 rounded cursor-pointer select-none text-xs transition-all border ${
           isSelected
             ? 'bg-nb-yellow border-black font-bold shadow-[2px_2px_0_#000]'
             : 'border-transparent hover:bg-gray-100 text-gray-700'
@@ -173,15 +177,48 @@ export default function WorkspaceFileTree({
           </span>
         </div>
 
-        {node.objectCount !== undefined && node.objectCount > 0 && (
-          <span
-            className={`text-[10px] px-1.5 py-0.2 rounded-full border flex-shrink-0 font-mono ${
-              isSelected ? 'bg-black text-white border-black' : 'bg-gray-200 text-gray-700 border-gray-300'
-            }`}
-          >
-            {node.objectCount}
-          </span>
-        )}
+        <div className="flex items-center gap-1 flex-shrink-0 ml-1">
+          {node.objectCount !== undefined && node.objectCount > 0 && (
+            <span
+              className={`text-[10px] px-1.5 py-0.2 rounded-full border font-mono ${
+                isSelected ? 'bg-black text-white border-black' : 'bg-gray-200 text-gray-700 border-gray-300'
+              }`}
+            >
+              {node.objectCount}
+            </span>
+          )}
+
+          {/* Action buttons (Rename & Delete) */}
+          <div className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5 transition-opacity">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                const newName = window.prompt('Nhập tên mới cho ảnh:', node.name);
+                if (newName && onRenameImage) {
+                  onRenameImage(workspaceId, node.relPath, newName);
+                }
+              }}
+              title="Đổi tên ảnh"
+              className="p-0.5 rounded hover:bg-black/10 text-gray-700 hover:text-black"
+            >
+              ✏️
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onDeleteImage) {
+                  onDeleteImage(workspaceId, node.relPath);
+                }
+              }}
+              title="Xóa ảnh"
+              className="p-0.5 rounded hover:bg-red-100 text-red-600 hover:text-red-800"
+            >
+              🗑️
+            </button>
+          </div>
+        </div>
       </div>
     );
   };

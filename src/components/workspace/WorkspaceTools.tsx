@@ -16,6 +16,8 @@ interface WorkspaceToolsProps {
   onChangeEraserSize: (size: number) => void;
   dotRadius: number;
   onChangeDotRadius: (radius: number) => void;
+  globalDotOpacity: number;
+  onChangeGlobalDotOpacity: (opacity: number) => void;
   reviewDisplayMode: ReviewDisplayMode;
   onChangeReviewDisplayMode: (mode: ReviewDisplayMode) => void;
   reviewFontSize: number;
@@ -42,8 +44,10 @@ export default function WorkspaceTools({
   onChangeBrushSize,
   eraserSize,
   onChangeEraserSize,
-  dotRadius,
-  onChangeDotRadius,
+  dotRadius: _dotRadius,
+  onChangeDotRadius: _onChangeDotRadius,
+  globalDotOpacity,
+  onChangeGlobalDotOpacity,
   reviewDisplayMode,
   onChangeReviewDisplayMode,
   reviewFontSize,
@@ -67,6 +71,22 @@ export default function WorkspaceTools({
             <option value="show_numbers">🔢 Hiện số (theo Caption)</option>
             <option value="show_captions">🏷️ Hiện Caption</option>
           </select>
+        </div>
+
+        {/* Global Dot Opacity in Review Mode */}
+        <div className="flex flex-col gap-1.5 bg-white p-2.5 rounded-lg border-2 border-black">
+          <div className="flex justify-between items-center text-xs font-semibold">
+            <span>Độ trong suốt Dot:</span>
+            <span className="font-mono bg-nb-yellow px-1.5 rounded">{globalDotOpacity}%</span>
+          </div>
+          <input
+            type="range"
+            min="0"
+            max="100"
+            value={globalDotOpacity}
+            onChange={(e) => onChangeGlobalDotOpacity(Number(e.target.value))}
+            className="w-full accent-black cursor-pointer"
+          />
         </div>
 
         {reviewDisplayMode !== 'markers_only' && (
@@ -109,7 +129,7 @@ export default function WorkspaceTools({
           className={`tool-btn py-2 text-xs flex items-center justify-center gap-1.5 ${
             activeTool === 'dot' ? 'bg-nb-yellow ring-2 ring-black font-bold' : ''
           }`}
-          title="Thêm điểm đánh dấu kèm vòng biên tròn (Phím D)"
+          title="Thêm điểm đánh dấu Dot (Phím D)"
         >
           <span>🎯 Dot</span>
           <kbd className="text-[10px] bg-black/10 px-1 rounded">D</kbd>
@@ -152,23 +172,52 @@ export default function WorkspaceTools({
         </button>
       </div>
 
+      {/* Global Dot Opacity */}
+      <div className="bg-white p-2.5 rounded-lg border-2 border-black flex flex-col gap-2">
+        <div className="flex justify-between items-center text-xs font-semibold">
+          <span>Độ trong suốt Dot:</span>
+          <span className="font-mono bg-nb-yellow px-1.5 rounded">{globalDotOpacity}%</span>
+        </div>
+        <input
+          type="range"
+          min="0"
+          max="100"
+          value={globalDotOpacity}
+          onChange={(e) => onChangeGlobalDotOpacity(Number(e.target.value))}
+          className="w-full accent-black cursor-pointer"
+        />
+        <p className="text-[10px] text-gray-500 italic">
+          * Giảm độ đậm/nhạt toàn bộ các dot trên ảnh (0 - 100%).
+        </p>
+      </div>
+
       {/* Tool-specific Settings */}
       {activeTool === 'dot' && (
         <div className="bg-white p-2.5 rounded-lg border-2 border-black flex flex-col gap-2">
-          <div className="flex justify-between items-center text-xs font-semibold">
-            <span>Bán kính biên:</span>
-            <span className="font-mono bg-nb-cyan px-1.5 rounded">{dotRadius}px</span>
+          <span className="text-xs font-semibold">Màu Dot mặc định:</span>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {PRESET_COLORS.map((c) => (
+              <button
+                type="button"
+                key={c}
+                onClick={() => onChangeColor(c)}
+                className={`w-5 h-5 rounded-full border border-black cursor-pointer transition-transform ${
+                  color === c ? 'scale-125 ring-2 ring-black' : 'hover:scale-110'
+                }`}
+                style={{ backgroundColor: c }}
+                title={c}
+              />
+            ))}
+            <input
+              type="color"
+              value={color}
+              onChange={(e) => onChangeColor(e.target.value)}
+              className="w-6 h-6 rounded cursor-pointer border border-black"
+              title="Chọn màu tùy ý"
+            />
           </div>
-          <input
-            type="range"
-            min="10"
-            max="120"
-            value={dotRadius}
-            onChange={(e) => onChangeDotRadius(Number(e.target.value))}
-            className="w-full accent-black cursor-pointer"
-          />
           <p className="text-[10px] text-gray-500 italic">
-            * Có thể cuộn chuột để phóng to/thu nhỏ bán kính khi đang chọn Dot.
+            * Nhấp vào ảnh để đặt điểm Dot đánh dấu cấu trúc.
           </p>
         </div>
       )}

@@ -42,6 +42,7 @@ export default function WorkspacePage() {
   const [brushSize, setBrushSize] = useState(20);
   const [eraserSize, setEraserSize] = useState(30);
   const [dotRadius, setDotRadius] = useState(35);
+  const [globalDotOpacity, setGlobalDotOpacity] = useState(100);
 
   // Review mode display options
   const [reviewDisplayMode, setReviewDisplayMode] = useState<ReviewDisplayMode>('markers_only');
@@ -339,41 +340,86 @@ export default function WorkspacePage() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleSaveWorkspace, handleUndo, handleRedo, selectedItems, mode, handleOpenQuickCaption]);
 
-  // Helper to scan directory recursively
-  const scanDirectoryRecursive = async (
+  interface FoundWs {
+    handle: FileSystemDirectoryHandle;
+    name: string;
+    data: WorkspaceFile;
+    imageFiles: Map<string, File>;
+  }
+
+  // Collect image files inside a directory handle (excluding subdirectories that contain their own workspace.json)
+  const collectImagesInDirHandle = async (
     dirHandle: FileSystemDirectoryHandle,
     imageFiles: Map<string, File>,
-    currentPath = ''
-  ): Promise<string | null> => {
-    let rootWorkspaceJsonText: string | null = null;
+    currentSubPath = ''
+  ) => {
     for await (const entry of (dirHandle as unknown as { values: () => AsyncIterable<FileSystemFileHandle | FileSystemDirectoryHandle> }).values()) {
       if (entry.kind === 'file') {
         const fileHandle = entry as FileSystemFileHandle;
-        const file = await fileHandle.getFile();
-        const lowerName = file.name.toLowerCase();
-        const relPath = currentPath ? `${currentPath}/${file.name}` : file.name;
-
-        if (lowerName === 'workspace.json' && !currentPath) {
-          try {
-            rootWorkspaceJsonText = await file.text();
-          } catch (e) {
-            console.warn('Cannot read workspace.json', e);
-          }
-        } else if (
-          lowerName.endsWith('.png') ||
-          lowerName.endsWith('.jpg') ||
-          lowerName.endsWith('.jpeg') ||
-          lowerName.endsWith('.webp')
+        const lower = fileHandle.name.toLowerCase();
+        if (
+          lower.endsWith('.png') ||
+          lower.endsWith('.jpg') ||
+          lower.endsWith('.jpeg') ||
+          lower.endsWith('.webp')
         ) {
+          const file = await fileHandle.getFile();
+          const relPath = currentSubPath ? `${currentSubPath}/${fileHandle.name}` : fileHandle.name;
           imageFiles.set(relPath, file);
         }
       } else if (entry.kind === 'directory') {
-        const subDirHandle = entry as FileSystemDirectoryHandle;
-        const subPath = currentPath ? `${currentPath}/${subDirHandle.name}` : subDirHandle.name;
-        await scanDirectoryRecursive(subDirHandle, imageFiles, subPath);
+        const subDir = entry as FileSystemDirectoryHandle;
+        const hasItsOwnWs = await subDir.getFileHandle('workspace.json').then(() => true).catch(() => false);
+        if (!hasItsOwnWs) {
+          const nextSubPath = currentSubPath ? `${currentSubPath}/${subDir.name}` : subDir.name;
+          await collectImagesInDirHandle(subDir, imageFiles, nextSubPath);
+        }
       }
     }
-    return rootWorkspaceJsonText;
+  };
+
+  // Find all workspace.json files recursively
+  const findWorkspacesRecursive = async (
+    dirHandle: FileSystemDirectoryHandle,
+    results: FoundWs[]
+  ) => {
+    let wsFileHandle: FileSystemFileHandle | null = null;
+    try {
+      wsFileHandle = await dirHandle.getFileHandle('workspace.json');
+    } catch {
+      wsFileHandle = null;
+    }
+
+    if (wsFileHandle) {
+      try {
+        const file = await wsFileHandle.getFile();
+        const text = await file.text();
+        const data: WorkspaceFile = JSON.parse(text);
+        const imageFiles = new Map<string, File>();
+        await collectImagesInDirHandle(dirHandle, imageFiles);
+
+        results.push({
+          handle: dirHandle,
+          name: dirHandle.name,
+          data: {
+            workspaceId: data.workspaceId || generateId('ws'),
+            name: data.name || dirHandle.name,
+            createdAt: data.createdAt || new Date().toISOString(),
+            updatedAt: data.updatedAt || new Date().toISOString(),
+            images: data.images || {},
+          },
+          imageFiles,
+        });
+      } catch (err) {
+        console.warn('Failed parsing workspace.json in', dirHandle.name, err);
+      }
+    }
+
+    for await (const entry of (dirHandle as unknown as { values: () => AsyncIterable<FileSystemFileHandle | FileSystemDirectoryHandle> }).values()) {
+      if (entry.kind === 'directory') {
+        await findWorkspacesRecursive(entry as FileSystemDirectoryHandle, results);
+      }
+    }
   };
 
   // Load workspace via File System Access API or input fallback
@@ -381,31 +427,54 @@ export default function WorkspacePage() {
     if ('showDirectoryPicker' in window) {
       try {
         const dirHandle = await (window as unknown as { showDirectoryPicker: () => Promise<FileSystemDirectoryHandle> }).showDirectoryPicker();
-        const imageFiles = new Map<string, File>();
-        const workspaceJsonText = await scanDirectoryRecursive(dirHandle, imageFiles);
+        const foundWorkspaces: FoundWs[] = [];
+        await findWorkspacesRecursive(dirHandle, foundWorkspaces);
 
-        let workspaceJsonData: WorkspaceFile | null = null;
-        if (workspaceJsonText) {
-          try {
-            workspaceJsonData = JSON.parse(workspaceJsonText);
-          } catch (e) {
-            console.warn('Cannot parse workspace.json, will recreate', e);
+        if (foundWorkspaces.length > 0) {
+          const newLoadedList: LoadedWorkspace[] = foundWorkspaces.map((fw) => ({
+            handle: fw.handle,
+            workspaceId: fw.data.workspaceId,
+            name: fw.name,
+            color: getRandomColor(),
+            visible: true,
+            data: fw.data,
+            imageFiles: fw.imageFiles,
+            isDirty: false,
+          }));
+
+          setWorkspaces((prev) => {
+            const newIds = new Set(newLoadedList.map((nl) => nl.workspaceId));
+            const filtered = prev.filter((w) => !newIds.has(w.workspaceId));
+            return [...filtered, ...newLoadedList];
+          });
+
+          // Focus first loaded workspace
+          const firstWs = newLoadedList[0];
+          setCurrentWorkspaceId(firstWs.workspaceId);
+          const firstImgPath = Array.from(firstWs.imageFiles.keys())[0];
+          if (firstImgPath) {
+            setCurrentRelPath(firstImgPath);
           }
-        }
+        } else {
+          // No workspace.json found: ask user to initialize a new workspace
+          const confirmCreate = window.confirm(
+            `Không tìm thấy file workspace.json nào trong thư mục "${dirHandle.name}".\n\nBạn có muốn khởi tạo một Workspace mới cho thư mục ảnh này không?`
+          );
+          if (!confirmCreate) return;
 
-        const wsId = workspaceJsonData?.workspaceId || generateId('ws');
-        const wsName = dirHandle.name; // Tên workspace luôn là tên thư mục chứa workspace.json
+          const imageFiles = new Map<string, File>();
+          await collectImagesInDirHandle(dirHandle, imageFiles);
 
-        const finalData: WorkspaceFile = {
-          workspaceId: wsId,
-          name: wsName,
-          createdAt: workspaceJsonData?.createdAt || new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          images: workspaceJsonData?.images || {},
-        };
+          const wsId = generateId('ws');
+          const wsName = dirHandle.name;
+          const finalData: WorkspaceFile = {
+            workspaceId: wsId,
+            name: wsName,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            images: {},
+          };
 
-        // Nếu chưa có workspace.json thì tạo ngay trên đĩa
-        if (!workspaceJsonData) {
           try {
             const fileHandle = await dirHandle.getFileHandle('workspace.json', { create: true });
             const writable = await fileHandle.createWritable();
@@ -414,26 +483,24 @@ export default function WorkspacePage() {
           } catch (createErr) {
             console.warn('Could not auto-create workspace.json on disk', createErr);
           }
-        }
 
-        const newLoadedWorkspace: LoadedWorkspace = {
-          handle: dirHandle,
-          workspaceId: wsId,
-          name: wsName,
-          color: getRandomColor(),
-          visible: true,
-          data: finalData,
-          imageFiles,
-          isDirty: false,
-        };
+          const newWs: LoadedWorkspace = {
+            handle: dirHandle,
+            workspaceId: wsId,
+            name: wsName,
+            color: getRandomColor(),
+            visible: true,
+            data: finalData,
+            imageFiles,
+            isDirty: false,
+          };
 
-        setWorkspaces((prev) => [...prev, newLoadedWorkspace]);
-        setCurrentWorkspaceId(wsId);
-
-        // Select first image
-        const firstImgPath = Array.from(imageFiles.keys())[0];
-        if (firstImgPath) {
-          setCurrentRelPath(firstImgPath);
+          setWorkspaces((prev) => [...prev, newWs]);
+          setCurrentWorkspaceId(wsId);
+          const firstImgPath = Array.from(imageFiles.keys())[0];
+          if (firstImgPath) {
+            setCurrentRelPath(firstImgPath);
+          }
         }
       } catch (err) {
         if ((err as Error).name !== 'AbortError') {
@@ -453,67 +520,148 @@ export default function WorkspacePage() {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    const imageFiles = new Map<string, File>();
-    let workspaceJsonData: WorkspaceFile | null = null;
-    let folderName = 'Workspace';
-
+    // Find all workspace.json files in the uploaded folder tree
+    const wsFiles: File[] = [];
     for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      const lowerName = file.name.toLowerCase();
-      let relPath = file.name;
-      if (file.webkitRelativePath) {
-        const parts = file.webkitRelativePath.split('/');
-        if (parts.length > 1) {
-          folderName = parts[0];
-          relPath = parts.slice(1).join('/');
-        }
-      }
-
-      if (lowerName === 'workspace.json' && (!file.webkitRelativePath || file.webkitRelativePath.split('/').length <= 2)) {
-        try {
-          const text = await file.text();
-          workspaceJsonData = JSON.parse(text);
-        } catch (err) {
-          console.warn('Cannot parse workspace.json fallback', err);
-        }
-      } else if (
-        lowerName.endsWith('.png') ||
-        lowerName.endsWith('.jpg') ||
-        lowerName.endsWith('.jpeg') ||
-        lowerName.endsWith('.webp')
-      ) {
-        imageFiles.set(relPath, file);
+      if (files[i].name.toLowerCase() === 'workspace.json') {
+        wsFiles.push(files[i]);
       }
     }
 
-    const wsId = workspaceJsonData?.workspaceId || generateId('ws');
-    const wsName = folderName;
+    if (wsFiles.length > 0) {
+      const newWorkspaces: LoadedWorkspace[] = [];
 
-    const finalData: WorkspaceFile = {
-      workspaceId: wsId,
-      name: wsName,
-      createdAt: workspaceJsonData?.createdAt || new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      images: workspaceJsonData?.images || {},
-    };
+      for (const wsFile of wsFiles) {
+        try {
+          const text = await wsFile.text();
+          const data: WorkspaceFile = JSON.parse(text);
 
-    const newLoadedWorkspace: LoadedWorkspace = {
-      handle: null,
-      workspaceId: wsId,
-      name: wsName,
-      color: getRandomColor(),
-      visible: true,
-      data: finalData,
-      imageFiles,
-      isDirty: false,
-    };
+          const fullRelPath = wsFile.webkitRelativePath || wsFile.name;
+          const parts = fullRelPath.split('/');
+          const dirParts = parts.slice(0, -1);
+          const dirPrefix = dirParts.join('/');
+          const wsFolderName = dirParts.length > 0 ? dirParts[dirParts.length - 1] : 'Workspace';
 
-    setWorkspaces((prev) => [...prev, newLoadedWorkspace]);
-    setCurrentWorkspaceId(wsId);
+          const imageFiles = new Map<string, File>();
+          for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            const lower = file.name.toLowerCase();
+            if (
+              lower.endsWith('.png') ||
+              lower.endsWith('.jpg') ||
+              lower.endsWith('.jpeg') ||
+              lower.endsWith('.webp')
+            ) {
+              const fPath = file.webkitRelativePath || file.name;
+              if (dirPrefix === '' || fPath.startsWith(dirPrefix + '/')) {
+                const isDeeperWs = wsFiles.some(
+                  (otherWs) =>
+                    otherWs !== wsFile &&
+                    (otherWs.webkitRelativePath || otherWs.name).startsWith(dirPrefix + '/') &&
+                    fPath.startsWith((otherWs.webkitRelativePath || otherWs.name).split('/').slice(0, -1).join('/') + '/')
+                );
+                if (!isDeeperWs) {
+                  const subRelPath = dirPrefix === '' ? fPath : fPath.substring(dirPrefix.length + 1);
+                  imageFiles.set(subRelPath, file);
+                }
+              }
+            }
+          }
 
-    const firstImgPath = Array.from(imageFiles.keys())[0];
-    if (firstImgPath) {
-      setCurrentRelPath(firstImgPath);
+          const wsId = data.workspaceId || generateId('ws');
+          const finalData: WorkspaceFile = {
+            workspaceId: wsId,
+            name: data.name || wsFolderName,
+            createdAt: data.createdAt || new Date().toISOString(),
+            updatedAt: data.updatedAt || new Date().toISOString(),
+            images: data.images || {},
+          };
+
+          newWorkspaces.push({
+            handle: null,
+            workspaceId: wsId,
+            name: finalData.name,
+            color: getRandomColor(),
+            visible: true,
+            data: finalData,
+            imageFiles,
+            isDirty: false,
+          });
+        } catch (err) {
+          console.warn('Error reading fallback workspace.json', err);
+        }
+      }
+
+      if (newWorkspaces.length > 0) {
+        setWorkspaces((prev) => {
+          const newIds = new Set(newWorkspaces.map((nw) => nw.workspaceId));
+          const filtered = prev.filter((w) => !newIds.has(w.workspaceId));
+          return [...filtered, ...newWorkspaces];
+        });
+
+        setCurrentWorkspaceId(newWorkspaces[0].workspaceId);
+        const firstImg = Array.from(newWorkspaces[0].imageFiles.keys())[0];
+        if (firstImg) {
+          setCurrentRelPath(firstImg);
+        }
+      }
+    } else {
+      // No workspace.json: ask to create
+      const confirmCreate = window.confirm(
+        'Không tìm thấy file workspace.json nào trong thư mục đã tải lên. Bạn có muốn tạo Workspace mới cho các ảnh này không?'
+      );
+      if (!confirmCreate) return;
+
+      const imageFiles = new Map<string, File>();
+      let folderName = 'Workspace';
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const lower = file.name.toLowerCase();
+        let relPath = file.name;
+        if (file.webkitRelativePath) {
+          const parts = file.webkitRelativePath.split('/');
+          if (parts.length > 1) {
+            folderName = parts[0];
+            relPath = parts.slice(1).join('/');
+          }
+        }
+        if (
+          lower.endsWith('.png') ||
+          lower.endsWith('.jpg') ||
+          lower.endsWith('.jpeg') ||
+          lower.endsWith('.webp')
+        ) {
+          imageFiles.set(relPath, file);
+        }
+      }
+
+      const wsId = generateId('ws');
+      const finalData: WorkspaceFile = {
+        workspaceId: wsId,
+        name: folderName,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        images: {},
+      };
+
+      const newLoadedWorkspace: LoadedWorkspace = {
+        handle: null,
+        workspaceId: wsId,
+        name: folderName,
+        color: getRandomColor(),
+        visible: true,
+        data: finalData,
+        imageFiles,
+        isDirty: false,
+      };
+
+      setWorkspaces((prev) => [...prev, newLoadedWorkspace]);
+      setCurrentWorkspaceId(wsId);
+      const firstImgPath = Array.from(imageFiles.keys())[0];
+      if (firstImgPath) {
+        setCurrentRelPath(firstImgPath);
+      }
     }
   };
 
@@ -547,6 +695,154 @@ export default function WorkspacePage() {
       }
     }
   };
+
+  // Rename image
+  const handleRenameImage = useCallback(
+    async (workspaceId: string, oldRelPath: string, newFileName: string) => {
+      const ws = workspaces.find((w) => w.workspaceId === workspaceId);
+      if (!ws) return;
+
+      const trimmedName = newFileName.trim();
+      if (!trimmedName) {
+        alert('Tên tệp không được để trống.');
+        return;
+      }
+
+      const oldExt = oldRelPath.includes('.') ? oldRelPath.substring(oldRelPath.lastIndexOf('.')) : '';
+      const finalFileName = trimmedName.includes('.') ? trimmedName : `${trimmedName}${oldExt}`;
+
+      const parts = oldRelPath.replace(/\\/g, '/').split('/');
+      parts[parts.length - 1] = finalFileName;
+      const newRelPath = parts.join('/');
+
+      if (newRelPath === oldRelPath) return;
+
+      if (ws.imageFiles.has(newRelPath)) {
+        alert('Tên tệp này đã tồn tại trong workspace!');
+        return;
+      }
+
+      // Handle disk rename if directory handle is present
+      if (ws.handle) {
+        try {
+          let parentDir = ws.handle;
+          for (let i = 0; i < parts.length - 1; i++) {
+            parentDir = await parentDir.getDirectoryHandle(parts[i]);
+          }
+
+          const oldFileName = oldRelPath.replace(/\\/g, '/').split('/').pop()!;
+          const oldFileHandle = await parentDir.getFileHandle(oldFileName);
+          const oldFile = await oldFileHandle.getFile();
+
+          const newFileHandle = await parentDir.getFileHandle(finalFileName, { create: true });
+          const writable = await newFileHandle.createWritable();
+          await writable.write(oldFile);
+          await writable.close();
+
+          await parentDir.removeEntry(oldFileName);
+        } catch (err) {
+          console.error('Error renaming on disk:', err);
+          alert('Không thể đổi tên tệp trên ổ đĩa: ' + String(err));
+          return;
+        }
+      }
+
+      const oldFileObj = ws.imageFiles.get(oldRelPath);
+      const newFileObj = oldFileObj
+        ? new File([oldFileObj], finalFileName, { type: oldFileObj.type })
+        : null;
+
+      setWorkspaces((prev) =>
+        prev.map((w) => {
+          if (w.workspaceId !== workspaceId) return w;
+
+          const newImageFiles = new Map(w.imageFiles);
+          newImageFiles.delete(oldRelPath);
+          if (newFileObj) {
+            newImageFiles.set(newRelPath, newFileObj);
+          }
+
+          const newImages = { ...w.data.images };
+          if (newImages[oldRelPath]) {
+            newImages[newRelPath] = newImages[oldRelPath];
+            delete newImages[oldRelPath];
+          }
+
+          return {
+            ...w,
+            isDirty: true,
+            imageFiles: newImageFiles,
+            data: {
+              ...w.data,
+              images: newImages,
+              updatedAt: new Date().toISOString(),
+            },
+          };
+        })
+      );
+
+      if (currentWorkspaceId === workspaceId && currentRelPath === oldRelPath) {
+        setCurrentRelPath(newRelPath);
+      }
+    },
+    [workspaces, currentWorkspaceId, currentRelPath]
+  );
+
+  // Delete image
+  const handleDeleteImage = useCallback(
+    async (workspaceId: string, relPath: string) => {
+      const ws = workspaces.find((w) => w.workspaceId === workspaceId);
+      if (!ws) return;
+
+      const fileName = relPath.replace(/\\/g, '/').split('/').pop()!;
+      const confirmed = window.confirm(`Bạn có chắc chắn muốn xóa ảnh "${fileName}" không? Thao tác này không thể hoàn tác.`);
+      if (!confirmed) return;
+
+      if (ws.handle) {
+        try {
+          const parts = relPath.replace(/\\/g, '/').split('/');
+          let parentDir = ws.handle;
+          for (let i = 0; i < parts.length - 1; i++) {
+            parentDir = await parentDir.getDirectoryHandle(parts[i]);
+          }
+          await parentDir.removeEntry(fileName);
+        } catch (err) {
+          console.error('Error deleting on disk:', err);
+          alert('Không thể xóa tệp trên ổ đĩa: ' + String(err));
+          return;
+        }
+      }
+
+      setWorkspaces((prev) =>
+        prev.map((w) => {
+          if (w.workspaceId !== workspaceId) return w;
+
+          const newImageFiles = new Map(w.imageFiles);
+          newImageFiles.delete(relPath);
+
+          const newImages = { ...w.data.images };
+          delete newImages[relPath];
+
+          return {
+            ...w,
+            isDirty: true,
+            imageFiles: newImageFiles,
+            data: {
+              ...w.data,
+              images: newImages,
+              updatedAt: new Date().toISOString(),
+            },
+          };
+        })
+      );
+
+      if (currentWorkspaceId === workspaceId && currentRelPath === relPath) {
+        const remainingImages = Array.from(ws.imageFiles.keys()).filter((p) => p !== relPath);
+        setCurrentRelPath(remainingImages.length > 0 ? remainingImages[0] : null);
+      }
+    },
+    [workspaces, currentWorkspaceId, currentRelPath]
+  );
 
   // Select image
   const handleSelectImage = (workspaceId: string, relPath: string) => {
@@ -594,6 +890,8 @@ export default function WorkspacePage() {
               currentWorkspaceId={currentWorkspaceId}
               currentRelPath={currentRelPath}
               onSelectImage={handleSelectImage}
+              onRenameImage={handleRenameImage}
+              onDeleteImage={handleDeleteImage}
             />
           }
           leftContentBottom={
@@ -612,6 +910,8 @@ export default function WorkspacePage() {
               onChangeEraserSize={setEraserSize}
               dotRadius={dotRadius}
               onChangeDotRadius={setDotRadius}
+              globalDotOpacity={globalDotOpacity}
+              onChangeGlobalDotOpacity={setGlobalDotOpacity}
               reviewDisplayMode={reviewDisplayMode}
               onChangeReviewDisplayMode={setReviewDisplayMode}
               reviewFontSize={reviewFontSize}
@@ -629,6 +929,7 @@ export default function WorkspacePage() {
               brushSize={brushSize}
               eraserSize={eraserSize}
               dotRadius={dotRadius}
+              globalDotOpacity={globalDotOpacity}
               reviewDisplayMode={reviewDisplayMode}
               reviewFontSize={reviewFontSize}
               selectedItems={selectedItems}
