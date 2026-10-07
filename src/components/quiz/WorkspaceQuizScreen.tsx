@@ -473,6 +473,8 @@ export default function WorkspaceQuizScreen({
 
   const pct = Math.max(0, (timeLeft / timeLimit) * 100);
   const showShake = feedback !== null && !feedback.correct;
+  const correctCount = marks.filter((m) => m === 'correct').length;
+  const wrongCount = marks.filter((m) => m === 'wrong').length;
 
   const answerMcq = (opt: string) => {
     if (feedback) return;
@@ -483,22 +485,32 @@ export default function WorkspaceQuizScreen({
 
   return (
     <div className={`flex-1 flex flex-col bg-cream h-full select-none ${showShake ? 'animate-shake' : ''}`}>
-      {/* Top Countdown Progress Bar */}
-      <div className="w-full bg-white border-b-2 border-black h-3.5 flex-shrink-0">
+      {/* Top Countdown Progress Bar: transform-driven, exposed as progressbar */}
+      <div className="w-full bg-white border-b-2 border-black h-3.5 flex-shrink-0 relative">
         <div
-          className={`h-full ${timeLeft < 5 ? 'bg-nb-red' : 'bg-nb-lime'}`}
-          style={{ width: `${pct}%`, transition: 'width 1s linear' }}
+          role="progressbar"
+          aria-label="Thời gian còn lại"
+          aria-valuemin={0}
+          aria-valuemax={timeLimit}
+          aria-valuenow={Math.max(0, timeLeft)}
+          className={`h-full w-full origin-left ${timeLeft < 5 ? 'bg-nb-red' : 'bg-nb-lime'}`}
+          style={{ transform: `scaleX(${pct / 100})`, transition: 'transform 1s linear' }}
         />
+        <span className="sr-only">{Math.max(0, timeLeft)} giây còn lại</span>
       </div>
 
       {/* Station Progress Dots */}
       <div className="bg-white border-b-2 border-black px-3 py-1 flex justify-between items-center overflow-x-auto flex-shrink-0 text-xs">
-        <div className="flex items-center gap-1.5 overflow-x-auto py-0.5">
+        <div
+          className="flex items-center gap-1.5 overflow-x-auto py-0.5"
+          role="img"
+          aria-label={`Tiến trình: trạm ${index + 1} trên ${total}, ${correctCount} đúng, ${wrongCount} sai`}
+        >
           {Array.from({ length: total }, (_, i) => (
             <span
               key={i}
               title={`Trạm ${i + 1}`}
-              className={`w-3 h-3 border border-black flex-shrink-0 ${
+              className={`w-3.5 h-3.5 border border-black flex-shrink-0 ${
                 i < marks.length
                   ? marks[i] === 'correct'
                     ? 'bg-nb-lime'
@@ -513,7 +525,7 @@ export default function WorkspaceQuizScreen({
 
         <div className="font-mono font-bold flex items-center gap-2 pl-2 flex-shrink-0">
           <span className="text-gray-500">Trạm {index + 1}/{total}</span>
-          <span className={`px-2 py-0.5 rounded border border-black ${timeLeft < 5 ? 'bg-nb-red text-white animate-pulse' : 'bg-nb-yellow'}`}>
+          <span className={`px-2 py-0.5 rounded border border-black ${timeLeft < 5 ? 'bg-nb-red text-black font-bold' : 'bg-nb-yellow'}`}>
             ⏱️ {timeLeft}s
           </span>
         </div>
@@ -543,7 +555,7 @@ export default function WorkspaceQuizScreen({
         <button
           type="button"
           onClick={handleFitToView}
-          className="nb-btn px-2 py-0.5 text-[11px] rounded bg-white flex-shrink-0"
+          className="nb-btn px-2 py-0.5 text-xs rounded bg-white flex-shrink-0"
           title="Thu phóng vừa màn hình"
         >
           🔍 Vừa khung
@@ -563,7 +575,7 @@ export default function WorkspaceQuizScreen({
 
         {/* Miss Toast Hint in Identify Mode */}
         {missToast && (
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-nb-yellow border-2 border-black shadow-[3px_3px_0_#000] px-3 py-1.5 rounded-lg text-xs font-bold animate-bounce z-20 pointer-events-none">
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-nb-yellow border-2 border-black shadow-[3px_3px_0_#000] px-3 py-1.5 rounded-lg text-xs font-bold z-20 pointer-events-none">
             💡 Chưa trúng cấu trúc nào, hãy nhấp lại vào điểm đánh dấu!
           </div>
         )}
@@ -587,7 +599,7 @@ export default function WorkspaceQuizScreen({
                   {feedback.correct ? 'Chính xác!' : feedback.timeout ? 'Hết giờ!' : 'Chưa chính xác!'}
                 </div>
                 {feedback.message && (
-                  <div className="text-xs sm:text-sm font-bold text-gray-900 mt-0.5 truncate">
+                  <div className="text-xs sm:text-sm font-bold text-gray-900 mt-0.5 break-words">
                     {feedback.message}
                   </div>
                 )}
@@ -624,8 +636,8 @@ export default function WorkspaceQuizScreen({
                     selectedOpt === opt ? 'bg-nb-yellow ring-2 ring-black' : 'bg-white hover:bg-cream'
                   }`}
                 >
-                  <span className="truncate">{opt}</span>
-                  <kbd className="text-[10px] bg-black/10 px-1.5 py-0.5 rounded font-mono font-bold flex-shrink-0">
+                  <span className="break-words leading-snug">{opt}</span>
+                  <kbd className="text-xs bg-black/10 px-1.5 py-0.5 rounded font-mono font-bold flex-shrink-0">
                     {i + 1}
                   </kbd>
                 </button>

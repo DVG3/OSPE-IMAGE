@@ -120,13 +120,32 @@ export default function ZoomableImage({ src, alt = 'Question' }: Props) {
     lastSingle.current = null;
   }, [src, applyTransform]);
 
-  // Non-passive wheel handler so page doesn't scroll while zooming
+  // Non-passive wheel handler so page doesn't scroll while zooming.
+  // Mirrors LamDe canvas behavior: trackpad pinch (Ctrl+wheel) zooms gently,
+  // two-finger scroll pans, and only a real mouse wheel zooms at full rate.
   useEffect(() => {
     const holder = holderRef.current;
     if (!holder) return;
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
       markWheelSource(e);
+
+      // Trackpad pinch (Ctrl + wheel) → zoom at quarter rate so a normal
+      // pinch doesn't slam into MAX_SCALE
+      if (e.ctrlKey) {
+        const step = e.deltaY < 0 ? Math.pow(WHEEL_FACTOR, 0.25) : Math.pow(1 / WHEEL_FACTOR, 0.25);
+        zoomAtFocal(step, getLocal(e.clientX, e.clientY));
+        return;
+      }
+
+      // Trackpad two-finger scroll → pan the image (inverted direction)
+      if (isTouchpadActive()) {
+        const t = transform.current;
+        setTransform({ scale: t.scale, x: t.x - e.deltaX, y: t.y - e.deltaY });
+        return;
+      }
+
+      // Plain mouse wheel → zoom at cursor (unchanged)
       const factor = e.deltaY < 0 ? WHEEL_FACTOR : 1 / WHEEL_FACTOR;
       zoomAtFocal(factor, getLocal(e.clientX, e.clientY));
     };
@@ -252,14 +271,14 @@ export default function ZoomableImage({ src, alt = 'Question' }: Props) {
       <div className="absolute bottom-3 right-3 flex gap-2 z-10">
         <button
           onClick={() => zoomCenter(BUTTON_STEP)}
-          className="nb-btn w-9 h-9 rounded-lg text-lg leading-none"
+          className="nb-btn w-11 h-11 rounded-lg text-lg leading-none"
           title="Phóng to"
         >
           +
         </button>
         <button
           onClick={() => zoomCenter(1 / BUTTON_STEP)}
-          className="nb-btn w-9 h-9 rounded-lg text-lg leading-none"
+          className="nb-btn w-11 h-11 rounded-lg text-lg leading-none"
           title="Thu nhỏ"
         >
           −
@@ -267,7 +286,7 @@ export default function ZoomableImage({ src, alt = 'Question' }: Props) {
         <button
           onClick={resetView}
           disabled={uiScale === 1 && uiOffset.x === 0 && uiOffset.y === 0}
-          className="nb-btn px-3 rounded-lg text-xs uppercase tracking-wider"
+          className="nb-btn px-3 min-h-[44px] rounded-lg text-xs uppercase tracking-wider"
           title="Vừa khung"
         >
           Vừa khung

@@ -89,39 +89,52 @@ export default function QuizScreen({
 
   const pct = Math.max(0, (timeLeft / timeLimit) * 100);
   const showShake = feedback !== null && !feedback.correct;
+  const correctCount = marks.filter((m) => m === 'correct').length;
+  const wrongCount = marks.filter((m) => m === 'wrong').length;
 
   const mcqClass = (opt: string) => {
     if (feedback !== null && selectedOpt === opt) {
       return feedback.correct
         ? 'bg-nb-lime shadow-[inset_3px_3px_0_rgba(0,0,0,0.25)]'
-        : 'bg-nb-red text-white shadow-[inset_3px_3px_0_rgba(0,0,0,0.25)]';
+        : 'bg-nb-red text-black shadow-[inset_3px_3px_0_rgba(0,0,0,0.25)]';
     }
     return 'bg-white shadow-[3px_3px_0_#000] hover:-translate-y-0.5 hover:shadow-[5px_5px_0_#000]';
   };
 
   return (
     <div className={`flex-1 flex flex-col bg-cream h-full ${showShake ? 'animate-shake' : ''}`}>
-      <div className="w-full bg-white border-b-2 border-black h-4 flex-shrink-0">
+      {/* Timer: transform-driven (no layout thrash), exposed as progressbar */}
+      <div className="w-full bg-white border-b-2 border-black h-4 flex-shrink-0 relative">
         <div
-          className={`h-full ${timeLeft < 3 ? 'bg-nb-red' : 'bg-nb-lime'}`}
-          style={{ width: `${pct}%`, transition: 'width 1s linear' }}
+          role="progressbar"
+          aria-label="Thời gian còn lại"
+          aria-valuemin={0}
+          aria-valuemax={timeLimit}
+          aria-valuenow={Math.max(0, timeLeft)}
+          className={`h-full w-full origin-left ${timeLeft < 3 ? 'bg-nb-red' : 'bg-nb-lime'}`}
+          style={{ transform: `scaleX(${pct / 100})`, transition: 'transform 1s linear' }}
         />
+        <span className="sr-only">{Math.max(0, timeLeft)} giây còn lại</span>
       </div>
 
       {/* Station progress */}
       <div className="bg-white border-b-2 border-black px-2 py-1.5 flex justify-center overflow-x-auto flex-shrink-0">
-        <div className="flex gap-1">
+        <div
+          className="flex gap-1.5 items-center"
+          role="img"
+          aria-label={`Tiến trình: trạm ${index + 1} trên ${total}, ${correctCount} đúng, ${wrongCount} sai`}
+        >
           {Array.from({ length: total }, (_, i) => (
             <span
               key={i}
               title={`Câu ${i + 1}`}
-              className={`w-2.5 h-2.5 sm:w-3 sm:h-3 border border-black flex-shrink-0 ${
+              className={`w-3 h-3 sm:w-3.5 sm:h-3.5 border border-black flex-shrink-0 ${
                 i < marks.length
                   ? marks[i] === 'correct'
                     ? 'bg-nb-lime'
                     : 'bg-nb-red'
                   : i === marks.length
-                    ? 'bg-nb-yellow'
+                    ? 'bg-nb-yellow ring-2 ring-black'
                     : 'bg-white'
               }`}
             />
@@ -152,7 +165,7 @@ export default function QuizScreen({
                 onChange={(e) => setInputValue(e.target.value)}
                 className="nb-input flex-1 font-mono py-3 text-lg"
               />
-              <button onClick={() => onAnswer(inputValue)} className="nb-btn bg-nb-blue text-white py-3 px-8 rounded-lg uppercase tracking-wider">
+              <button onClick={() => onAnswer(inputValue)} className="nb-btn bg-nb-blue text-black py-3 px-8 rounded-lg uppercase tracking-wider">
                 Trả lời
               </button>
             </div>
@@ -170,12 +183,12 @@ export default function QuizScreen({
                   key={opt}
                   onClick={() => answerMcq(opt)}
                   disabled={!!feedback}
-                  className={`border-2 border-black rounded-lg font-bold py-3 px-4 text-left truncate transition-all duration-100 ${mcqClass(opt)}`}
+                  className={`border-2 border-black rounded-lg font-bold py-3 px-4 text-left leading-snug break-words transition-all duration-100 ${mcqClass(opt)}`}
                 >
-                  <span className="inline-flex items-center justify-center w-6 h-6 mr-2 text-xs bg-nb-yellow border-2 border-black align-middle">
+                  <span className="inline-flex items-center justify-center w-6 h-6 mr-2 text-xs bg-nb-yellow border-2 border-black align-middle flex-shrink-0">
                     {i + 1}
                   </span>
-                  {opt}
+                  <span className="align-middle">{opt}</span>
                 </button>
               ))}
             </div>
@@ -186,13 +199,13 @@ export default function QuizScreen({
           <div className="flex flex-col items-center gap-4 py-1">
             <div
               className={`w-full sm:w-auto border-[3px] border-black px-6 py-3 shadow-[4px_4px_0_#000] ${
-                feedback.correct ? 'bg-nb-lime' : 'bg-nb-red text-white'
+                feedback.correct ? 'bg-nb-lime' : 'bg-nb-red text-black'
               }`}
             >
               <div className="font-display text-xl sm:text-2xl tracking-tight text-center uppercase">
                 {feedback.correct ? 'Chính xác!' : feedback.timeout ? 'Hết giờ!' : 'Sai rồi!'}
               </div>
-              <div className={`text-sm font-bold mt-1 ${feedback.correct ? 'text-gray-800' : 'text-white/90'}`}>
+              <div className={`text-sm font-bold mt-1 break-words ${feedback.correct ? 'text-gray-800' : 'text-black/70'}`}>
                 Đáp án đúng:{' '}
                 <span className="underline decoration-2 underline-offset-2 select-all">{question.answer}</span>
               </div>

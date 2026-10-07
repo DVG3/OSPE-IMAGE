@@ -82,7 +82,7 @@ export default function WorkspaceHeader({
                 }}
               >
                 <span>💾 Lưu (workspace.json)</span>
-                <span className="text-[10px] text-gray-500 font-mono">Ctrl+S</span>
+                <span className="text-xs text-gray-500 font-mono">Ctrl+S</span>
               </button>
               {workspaces.length > 1 && (
                 <button
@@ -124,7 +124,7 @@ export default function WorkspaceHeader({
             }`}
           >
             <span>🗂️ Workspaces</span>
-            <span className="px-1.5 py-0.2 bg-black text-white rounded-full text-[10px] font-mono">
+            <span className="px-1.5 py-0.2 bg-black text-white rounded-full text-xs font-mono">
               {workspaces.length}
             </span>
           </button>
@@ -166,7 +166,7 @@ export default function WorkspaceHeader({
                           e.stopPropagation();
                           onCloseWorkspace(ws.workspaceId);
                         }}
-                        className="p-1 hover:bg-red-100 hover:text-red-600 rounded text-gray-400 font-bold"
+                        className="p-1 hover:bg-nb-yellow rounded text-black font-bold"
                         title="Đóng workspace này"
                       >
                         ✕

@@ -391,23 +391,8 @@ export default function WorkspaceLayers({
     const targetCaptionId = firstObj.captionId;
     const targetColor = firstCap?.color || firstObj.color || getRandomColor();
 
-    // Check if any other object has a non-empty caption
-    const otherHasCaption = selectedObjIds.slice(1).some((oid) => {
-      const obj = annotationData.objects.find((o) => o.id === oid);
-      if (!obj) return false;
-      const cap = annotationData.captions.find((c) => c.id === obj.captionId);
-      return cap && cap.name.trim().length > 0 && cap.id !== targetCaptionId;
-    });
-
-    if (otherHasCaption) {
-      const confirmMerge = window.confirm(
-        `Một số đối tượng đã có Caption khác. Bạn có chắc muốn gộp tất cả về Caption "${firstCap?.name || 'Đầu tiên'}" không?`
-      );
-      if (!confirmMerge) {
-        setContextMenu(null);
-        return;
-      }
-    }
+    // NOTE: merging is recoverable via Undo (Ctrl+Z / toolbar),
+    // so no blocking confirm dialog here.
 
     // Move objects to targetCaptionId and synchronize their color
     const updatedObjects = annotationData.objects.map((obj) =>
@@ -495,7 +480,7 @@ export default function WorkspaceLayers({
       <div className="px-3 py-1.5 bg-gray-100 border-b border-black flex items-center justify-between flex-shrink-0">
         <span className="font-bold text-xs uppercase tracking-wider flex items-center gap-1.5">
           <span>📑 Layers</span>
-          <span className="px-1.5 py-0.2 bg-black text-white rounded-full text-[10px]">
+          <span className="px-1.5 py-0.2 bg-black text-white rounded-full text-xs">
             {annotationData.objects.length}
           </span>
         </span>
@@ -503,7 +488,7 @@ export default function WorkspaceLayers({
           <button
             type="button"
             onClick={handleAddNewGroup}
-            className="nb-btn px-2 py-0.5 text-[11px] rounded bg-white hover:bg-nb-yellow"
+            className="nb-btn px-2 py-0.5 text-xs rounded bg-white hover:bg-nb-yellow"
             title="Thêm nhóm mới"
           >
             + Nhóm mới
@@ -601,7 +586,7 @@ export default function WorkspaceLayers({
                 >
                   <div className="flex items-center gap-1.5 min-w-0 flex-1">
                     {mode === 'review' && reviewDisplayMode === 'show_numbers' ? (
-                      <span className="w-4 h-4 rounded-full bg-black text-white text-[10px] flex items-center justify-center font-bold flex-shrink-0">
+                      <span className="w-5 h-5 rounded-full bg-black text-white text-xs flex items-center justify-center font-bold flex-shrink-0">
                         {capNumber}
                       </span>
                     ) : (
@@ -671,7 +656,7 @@ export default function WorkspaceLayers({
                       className="w-2.5 h-2.5 rounded-full border border-black flex-shrink-0"
                       style={{ backgroundColor: objColor }}
                     />
-                    <span className="truncate text-[11px]">
+                    <span className="truncate text-xs">
                       {obj.type === 'dot' ? 'Dot' : 'Highlight'}
                     </span>
                   </div>
@@ -725,7 +710,7 @@ export default function WorkspaceLayers({
             {/* Suggestions dropdown */}
             {showSuggestions && filteredSuggestions.length > 0 && (
               <div className="absolute left-0 right-0 bottom-full mb-1 bg-white border-2 border-black rounded-lg shadow-[3px_3px_0_#000] max-h-40 overflow-y-auto z-40">
-                <div className="px-2 py-1 text-[10px] text-gray-500 font-semibold bg-gray-50 border-b">
+                <div className="px-2 py-1 text-xs text-gray-500 font-semibold bg-gray-50 border-b">
                   Gợi ý từ Workspace:
                 </div>
                 {filteredSuggestions.map((sug) => (

@@ -922,13 +922,27 @@ export default function WorkspaceCanvas({
     >
       <canvas ref={canvasRef} className="absolute inset-0 block w-full h-full" />
 
+      {/* No-image empty state (non-blocking; dismisses itself on load) */}
+      {!imgElement && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none p-6">
+          <div className="bg-white border-[3px] border-black rounded-xl shadow-[6px_6px_0_#000] px-6 py-5 max-w-sm text-center">
+            <p className="font-display text-lg uppercase tracking-wide">Chưa có ảnh</p>
+            <p className="text-xs text-gray-600 mt-1 leading-relaxed">
+              Tải workspace rồi chọn một ảnh trong cây thư mục bên trái. Dùng công cụ{' '}
+              <span className="font-mono font-bold text-black">Dot</span> để chấm điểm cấu trúc,
+              đặt tên bằng phím <span className="font-mono font-bold text-black">C</span>.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Floating Bottom Toolbar */}
       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-white/95 backdrop-blur border-2 border-black rounded-xl p-1.5 shadow-[4px_4px_0_#000] flex items-center gap-1.5 z-20 text-xs">
         <button
           type="button"
           onClick={onUndo}
           disabled={!canUndo}
-          className="nb-btn px-2 py-1 rounded text-xs disabled:opacity-40"
+          className="nb-btn px-2 min-h-[44px] rounded text-xs disabled:opacity-40"
           title="Hoàn tác (Ctrl+Z)"
         >
           ↩ Hoàn tác
@@ -937,7 +951,7 @@ export default function WorkspaceCanvas({
           type="button"
           onClick={onRedo}
           disabled={!canRedo}
-          className="nb-btn px-2 py-1 rounded text-xs disabled:opacity-40"
+          className="nb-btn px-2 min-h-[44px] rounded text-xs disabled:opacity-40"
           title="Làm lại (Ctrl+Y)"
         >
           ↪ Làm lại
@@ -950,7 +964,7 @@ export default function WorkspaceCanvas({
           onClick={() => {
             setZoom((z) => Math.max(0.2, z * 0.8));
           }}
-          className="nb-btn w-7 h-7 rounded text-xs"
+          className="nb-btn w-11 h-11 rounded text-xs"
           title="Thu nhỏ"
         >
           -
@@ -965,7 +979,7 @@ export default function WorkspaceCanvas({
           onClick={() => {
             setZoom((z) => Math.min(10, z * 1.25));
           }}
-          className="nb-btn w-7 h-7 rounded text-xs"
+          className="nb-btn w-11 h-11 rounded text-xs"
           title="Phóng to"
         >
           +
@@ -974,7 +988,7 @@ export default function WorkspaceCanvas({
         <button
           type="button"
           onClick={handleFitToView}
-          className="nb-btn px-2 py-1 rounded text-xs"
+          className="nb-btn px-2 min-h-[44px] rounded text-xs"
           title="Vừa màn hình"
         >
           Fit
@@ -983,7 +997,7 @@ export default function WorkspaceCanvas({
         <button
           type="button"
           onClick={handleResetZoom}
-          className="nb-btn px-2 py-1 rounded text-xs"
+          className="nb-btn px-2 min-h-[44px] rounded text-xs"
           title="Tỷ lệ 100%"
         >
           1:1
@@ -1000,13 +1014,13 @@ export default function WorkspaceCanvas({
           onPointerUp={(e) => e.stopPropagation()}
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="font-bold text-[11px] text-gray-500 uppercase tracking-wider pb-1 border-b">
+          <div className="font-bold text-xs text-gray-500 uppercase tracking-wider pb-1 border-b">
             Tùy chọn đối tượng
           </div>
 
           {/* Color Picker Palette */}
           <div>
-            <div className="text-[11px] font-semibold mb-1">🎨 Đổi màu (toàn Caption):</div>
+            <div className="text-xs font-semibold mb-1">🎨 Đổi màu (toàn Caption):</div>
             <div className="flex items-center gap-1.5 flex-wrap">
               {PRESET_PALETTE.map((c) => (
                 <button

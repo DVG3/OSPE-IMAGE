@@ -138,7 +138,7 @@ export default function WorkspaceFileTree({
             className="flex items-center gap-1.5 py-1 px-1.5 rounded hover:bg-gray-200 cursor-pointer select-none text-xs font-semibold text-gray-800"
             style={{ paddingLeft: `${depth * 14 + 6}px` }}
           >
-            <span className="text-[10px] w-3 text-center text-gray-500">
+            <span className="text-xs w-3 text-center text-gray-500">
               {isExpanded ? '▼' : '▶'}
             </span>
             <span className="text-sm">{isExpanded ? '📂' : '📁'}</span>
@@ -180,7 +180,7 @@ export default function WorkspaceFileTree({
         <div className="flex items-center gap-1 flex-shrink-0 ml-1">
           {node.objectCount !== undefined && node.objectCount > 0 && (
             <span
-              className={`text-[10px] px-1.5 py-0.2 rounded-full border font-mono ${
+              className={`text-xs px-1.5 py-0.2 rounded-full border font-mono ${
                 isSelected ? 'bg-black text-white border-black' : 'bg-gray-200 text-gray-700 border-gray-300'
               }`}
             >
@@ -231,7 +231,7 @@ export default function WorkspaceFileTree({
       <div className="px-3 py-1.5 bg-gray-100 border-b border-black flex items-center justify-between flex-shrink-0">
         <span className="font-bold text-xs uppercase tracking-wider flex items-center gap-1.5">
           <span>🌳 Cây thư mục ảnh</span>
-          <span className="px-1.5 py-0.2 bg-black text-white rounded-full text-[10px]">
+          <span className="px-1.5 py-0.2 bg-black text-white rounded-full text-xs">
             {totalImageCount}
           </span>
         </span>
@@ -243,7 +243,7 @@ export default function WorkspaceFileTree({
           <div className="h-full flex flex-col items-center justify-center p-4 text-center text-gray-500 text-xs leading-relaxed">
             <span className="text-2xl mb-2">📁</span>
             <p className="font-semibold text-gray-700 mb-1">Chưa có Workspace nào được mở</p>
-            <p className="text-gray-500 text-[11px]">
+            <p className="text-gray-500 text-xs">
               Vui lòng vào <span className="font-bold text-black">File → Load Workspace...</span> ở thanh menu trên để bắt đầu.
             </p>
           </div>
@@ -267,7 +267,7 @@ export default function WorkspaceFileTree({
                   className="flex items-center justify-between p-1 rounded hover:bg-gray-200/80 cursor-pointer font-bold text-xs"
                 >
                   <div className="flex items-center gap-1.5 min-w-0">
-                    <span className="text-[10px] w-3 text-center text-gray-600">
+                    <span className="text-xs w-3 text-center text-gray-600">
                       {isWsExpanded ? '▼' : '▶'}
                     </span>
                     <span
@@ -278,7 +278,7 @@ export default function WorkspaceFileTree({
                       {workspace.name}
                     </span>
                   </div>
-                  <span className="text-[10px] font-mono bg-black text-white px-1.5 py-0.2 rounded-full">
+                  <span className="text-xs font-mono bg-black text-white px-1.5 py-0.2 rounded-full">
                     {imageCount} ảnh
                   </span>
                 </div>

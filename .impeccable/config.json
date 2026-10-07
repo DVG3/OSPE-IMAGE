@@ -1,0 +1,14 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "design-system-font-size",
+        "value": "16px",
+        "createdAt": "2026-10-07T11:46:22.910Z",
+        "reason": "iOS Safari 16px input floor, intentional hardening"
+      }
+    ]
+  }
+}

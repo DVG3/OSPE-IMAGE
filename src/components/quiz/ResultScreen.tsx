@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { WrongAnswer } from '../../hooks/useQuizEngine';
 import type { WorkspaceWrongAnswer } from '../../hooks/useWorkspaceQuizEngine';
-
 interface Props {
   correct: number;
   total: number;
@@ -35,7 +34,37 @@ export default function ResultScreen({
   onReset,
 }: Props) {
   const wrong = total - correct;
-  const finalScore = total > 0 ? ((correct / total) * 10).toFixed(1) : '0';
+  const scoreValue = total > 0 ? (correct / total) * 10 : 0;
+
+  // Count-up reveal: counts 0 → score over ~700ms. Instant when the user
+  // prefers reduced motion; the interface is complete without the flourish.
+  const [displayScore, setDisplayScore] = useState(0);
+  useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setDisplayScore(scoreValue);
+      return;
+    }
+    let raf = 0;
+    const start = performance.now();
+    const tick = (now: number) => {
+      const p = Math.min(1, (now - start) / 700);
+      setDisplayScore(scoreValue * (1 - Math.pow(1 - p, 3)));
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [scoreValue]);
+
+  const tier =
+    total === 0
+      ? null
+      : scoreValue >= 10
+        ? 'Tuyệt đối! Giữ vững phong độ này.'
+        : scoreValue >= 8
+          ? 'Xuất sắc! Chỉ còn vài trạm nữa thôi.'
+          : scoreValue >= 5
+            ? 'Khá tốt! Xem lại các câu sai bên dưới.'
+            : 'Đừng nản — xem lại từng câu sai rồi thi lại.';
 
   const hasFlashcardWrong = wrongAnswers && wrongAnswers.length > 0;
   const hasWorkspaceWrong = workspaceWrongAnswers && workspaceWrongAnswers.length > 0;
@@ -43,6 +72,9 @@ export default function ResultScreen({
   return (
     <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-8 gap-6 overflow-y-auto">
       <h2 className="font-display text-2xl sm:text-3xl uppercase tracking-wide">Kết quả bài thi</h2>
+      {tier && (
+        <p className="-mt-3 text-sm sm:text-base font-bold text-gray-700 text-center">{tier}</p>
+      )}
       <div className="grid grid-cols-2 gap-4 sm:gap-6 w-full max-w-md">
         <div className="bg-nb-lime border-[3px] border-black rounded-lg p-4 sm:p-6 text-center shadow-[6px_6px_0_#000]">
           <p className="font-display text-4xl sm:text-5xl">{correct}</p>
@@ -55,7 +87,9 @@ export default function ResultScreen({
       </div>
       <div className="bg-nb-yellow border-[3px] border-black rounded-lg px-8 py-3 shadow-[5px_5px_0_#000] font-bold text-xl flex items-center gap-3">
         Điểm số:
-        <span className="font-display text-4xl">{finalScore}</span>
+        <span className="font-display text-4xl tabular-nums" aria-live="polite">
+          {displayScore.toFixed(1)}
+        </span>
         <span className="font-display text-xl">/10</span>
       </div>
 
@@ -68,15 +102,15 @@ export default function ResultScreen({
                 <ReviewThumb file={w.image.file} />
                 <div className="flex-1 min-w-0 space-y-1">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-[10px] font-bold uppercase bg-nb-lime border-2 border-black px-1.5 rounded">
+                    <span className="text-xs font-bold uppercase bg-nb-lime border-2 border-black px-1.5 rounded">
                       Đúng
                     </span>
                     <span className="text-sm font-bold truncate">{w.image.answer}</span>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
                     <span
-                      className={`text-[10px] font-bold uppercase border-2 border-black px-1.5 rounded ${
-                        w.given === null ? 'bg-nb-yellow' : 'bg-nb-red text-white'
+                      className={`text-xs font-bold uppercase border-2 border-black px-1.5 rounded ${
+                        w.given === null ? 'bg-nb-yellow' : 'bg-nb-red text-black'
                       }`}
                     >
                       {w.given === null ? 'Hết giờ' : 'Bạn đã chọn'}
@@ -102,23 +136,23 @@ export default function ResultScreen({
                 <ReviewThumb file={w.question.imageFile} />
                 <div className="flex-1 min-w-0 space-y-1">
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="text-[10px] font-mono bg-black text-white px-1.5 py-0.2 rounded">
+                    <span className="text-xs font-mono bg-black text-white px-1.5 py-0.2 rounded">
                       {w.question.kind === 'classify' ? 'Phân loại' : 'Chọn cấu trúc'}
                     </span>
-                    <span className="text-[10px] text-gray-500 font-semibold truncate">
+                    <span className="text-xs text-gray-500 font-semibold truncate">
                       ({w.question.workspaceName})
                     </span>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-[10px] font-bold uppercase bg-nb-lime border-2 border-black px-1.5 rounded">
+                    <span className="text-xs font-bold uppercase bg-nb-lime border-2 border-black px-1.5 rounded">
                       Đúng
                     </span>
                     <span className="text-sm font-bold truncate">{w.question.targetCaptionName}</span>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
                     <span
-                      className={`text-[10px] font-bold uppercase border-2 border-black px-1.5 rounded ${
-                        w.given === null ? 'bg-nb-yellow' : 'bg-nb-red text-white'
+                      className={`text-xs font-bold uppercase border-2 border-black px-1.5 rounded ${
+                        w.given === null ? 'bg-nb-yellow' : 'bg-nb-red text-black'
                       }`}
                     >
                       {w.given === null ? 'Hết giờ' : 'Bạn đã chọn'}
@@ -135,7 +169,7 @@ export default function ResultScreen({
         </div>
       )}
 
-      <button onClick={onReset} className="nb-btn bg-nb-blue text-white py-3.5 px-8 rounded-lg uppercase tracking-wider">
+      <button onClick={onReset} className="nb-btn bg-nb-blue text-black py-3.5 px-8 rounded-lg uppercase tracking-wider">
         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
           <path
             fillRule="evenodd"

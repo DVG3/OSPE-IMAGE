@@ -107,7 +107,7 @@ export default function WorkspaceTools({
           </div>
         )}
 
-        <div className="mt-auto bg-white/80 p-2.5 rounded-lg border border-black/30 text-[11px] text-gray-600 leading-relaxed">
+        <div className="mt-auto bg-white/80 p-2.5 rounded-lg border border-black/30 text-xs text-gray-600 leading-relaxed">
           <p className="font-bold text-black mb-1">💡 Mẹo xem lại:</p>
           <p>• Nhấp vào điểm đánh dấu trên ảnh hoặc ở bảng Layers để viền phát sáng (Glow) vị trí cần học.</p>
         </div>
@@ -132,7 +132,7 @@ export default function WorkspaceTools({
           title="Thêm điểm đánh dấu Dot (Phím D)"
         >
           <span>🎯 Dot</span>
-          <kbd className="text-[10px] bg-black/10 px-1 rounded">D</kbd>
+          <kbd className="text-xs bg-black/10 px-1 rounded">D</kbd>
         </button>
 
         <button
@@ -144,7 +144,7 @@ export default function WorkspaceTools({
           title="Tô dạ quang nổi bật (Phím H)"
         >
           <span>🖍️ Highlight</span>
-          <kbd className="text-[10px] bg-black/10 px-1 rounded">H</kbd>
+          <kbd className="text-xs bg-black/10 px-1 rounded">H</kbd>
         </button>
 
         <button
@@ -156,7 +156,7 @@ export default function WorkspaceTools({
           title="Gôm xóa nét vẽ (Phím E)"
         >
           <span>🧹 Eraser</span>
-          <kbd className="text-[10px] bg-black/10 px-1 rounded">E</kbd>
+          <kbd className="text-xs bg-black/10 px-1 rounded">E</kbd>
         </button>
 
         <button
@@ -168,7 +168,7 @@ export default function WorkspaceTools({
           title="Chọn / Di chuyển đối tượng (Phím V)"
         >
           <span>👆 Chọn / Pan</span>
-          <kbd className="text-[10px] bg-black/10 px-1 rounded">V</kbd>
+          <kbd className="text-xs bg-black/10 px-1 rounded">V</kbd>
         </button>
       </div>
 
@@ -186,7 +186,7 @@ export default function WorkspaceTools({
           onChange={(e) => onChangeGlobalDotOpacity(Number(e.target.value))}
           className="w-full accent-black cursor-pointer"
         />
-        <p className="text-[10px] text-gray-500 italic">
+        <p className="text-xs text-gray-500 italic">
           * Giảm độ đậm/nhạt toàn bộ các dot trên ảnh (0 - 100%).
         </p>
       </div>
@@ -216,7 +216,7 @@ export default function WorkspaceTools({
               title="Chọn màu tùy ý"
             />
           </div>
-          <p className="text-[10px] text-gray-500 italic">
+          <p className="text-xs text-gray-500 italic">
             * Nhấp vào ảnh để đặt điểm Dot đánh dấu cấu trúc.
           </p>
         </div>
@@ -260,7 +260,7 @@ export default function WorkspaceTools({
               />
             </div>
           </div>
-          <p className="text-[10px] text-gray-500 italic">
+          <p className="text-xs text-gray-500 italic">
             * Có thể cuộn chuột lên/xuống để tăng giảm cỡ nét vẽ.
           </p>
         </div>
@@ -280,14 +280,14 @@ export default function WorkspaceTools({
             onChange={(e) => onChangeEraserSize(Number(e.target.value))}
             className="w-full accent-black cursor-pointer"
           />
-          <p className="text-[10px] text-gray-500 italic">
+          <p className="text-xs text-gray-500 italic">
             * Xóa vector trực tiếp (cắt đoạn nét highlight hoặc xóa dot khi quét qua).
           </p>
         </div>
       )}
 
       {/* Shortcuts Guide */}
-      <div className="mt-auto bg-white/70 p-2 rounded-lg border border-black/30 text-[11px] text-gray-600">
+      <div className="mt-auto bg-white/70 p-2 rounded-lg border border-black/30 text-xs text-gray-600">
         <p className="font-bold text-black mb-1">⌨️ Phím tắt hữu ích:</p>
         <div className="grid grid-cols-2 gap-x-2 gap-y-0.5">
           <span><kbd className="font-mono bg-gray-200 px-1 rounded">C</kbd> Đặt Caption</span>

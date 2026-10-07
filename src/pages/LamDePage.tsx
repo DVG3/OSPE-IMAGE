@@ -41,6 +41,7 @@ export default function LamDePage() {
   const loadEpochRef = useRef(0);
   const [currentIndex, setCurrentIndex] = useState(-1);
   const [fileName, setFileName] = useState('');
+  const [folderError, setFolderError] = useState<string | null>(null);
   const fileNameInputRef = useRef<HTMLInputElement>(null);
   const saveImageRef = useRef<() => Promise<void>>(async () => {});
   const [color, setColor] = useState('#ff0000');
@@ -659,9 +660,11 @@ export default function LamDePage() {
   const onFolderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []).filter((f) => f.type.startsWith('image/'));
     if (files.length === 0) {
-      alert('Không tìm thấy ảnh nào trong thư mục này!');
+      setFolderError('Không tìm thấy ảnh nào trong thư mục này!');
+      e.target.value = '';
       return;
     }
+    setFolderError(null);
     setImageFiles(files);
     filesRef.current = files;
     undoStackRef.current = [];
@@ -718,7 +721,7 @@ export default function LamDePage() {
     const text = new IText('Nhập chữ...', {
       left: 100,
       top: 100,
-      fontFamily: 'Arial',
+      fontFamily: "'Be Vietnam Pro', sans-serif",
       fill: color,
       fontSize: 26,
       fontWeight: 'bold',
@@ -734,7 +737,7 @@ export default function LamDePage() {
     const text = new IText('Nhập chữ...', {
       left: at.x,
       top: at.y,
-      fontFamily: 'Arial',
+      fontFamily: "'Be Vietnam Pro', sans-serif",
       fill: color,
       fontSize: 26,
       fontWeight: 'bold',
@@ -869,10 +872,10 @@ export default function LamDePage() {
   saveImageRef.current = saveImage;
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden font-sans bg-cream">
+    <div className="h-dvh flex flex-col overflow-hidden font-sans bg-cream">
       <NavBar />
-      <div className="flex-1 flex overflow-hidden">
-        <div className="w-64 bg-white border-r-[3px] border-black flex flex-col">
+      <div className="flex-1 flex flex-col md:flex-row overflow-y-auto md:overflow-hidden min-h-0">
+        <div className="w-full md:w-64 shrink-0 bg-white border-b-[3px] md:border-b-0 md:border-r-[3px] border-black flex flex-col md:h-full">
           <div className="p-4 border-b-2 border-black">
             <h2 className="font-display text-base uppercase tracking-wide mb-3">Tải thư mục</h2>
             <input
@@ -882,10 +885,30 @@ export default function LamDePage() {
               onChange={onFolderChange}
               className="block w-full text-xs text-gray-600 file:mr-2 file:cursor-pointer file:py-2 file:px-3 file:rounded-lg file:border-2 file:border-black file:text-xs file:font-bold file:bg-nb-cyan file:shadow-[2px_2px_0_#000] hover:file:-translate-y-0.5 hover:file:shadow-[3px_3px_0_#000] file:transition-all"
             />
+            {folderError && (
+              <div role="alert" className="flex items-start gap-2 mt-2 bg-nb-red/20 border-2 border-red-600 rounded-lg px-2.5 py-2 text-xs font-bold text-red-700">
+                <span className="flex-1">{folderError}</span>
+                <button
+                  type="button"
+                  onClick={() => setFolderError(null)}
+                  aria-label="Đóng thông báo lỗi"
+                  className="w-11 h-11 flex-shrink-0 flex items-center justify-center border-2 border-black rounded-full bg-white text-black font-bold leading-none hover:bg-nb-yellow"
+                >
+                  ×
+                </button>
+              </div>
+            )}
           </div>
-          <div className="flex-1 overflow-y-auto p-2">
+          <div className="max-h-48 md:max-h-none md:flex-1 overflow-y-auto p-2">
             {imageFiles.length === 0 ? (
-              <p className="text-gray-400 text-sm text-center italic mt-4">Chưa có ảnh nào</p>
+              <div className="text-center border-2 border-dashed border-gray-300 rounded-lg px-3 py-4 bg-cream/40">
+                <p className="font-display text-sm uppercase tracking-wide">Chưa có ảnh nào</p>
+                <p className="text-xs text-gray-600 mt-1 leading-relaxed">
+                  Tải thư mục ảnh ở ô phía trên để bắt đầu chú thích. Đặt tên file sau khi
+                  lưu theo dạng <span className="font-mono font-bold text-black">đáp án_01.png</span> để
+                  dùng làm đề thi Flash Card.
+                </p>
+              </div>
             ) : (
               imageFiles.map((file, idx) => (
                 <div
@@ -915,9 +938,21 @@ export default function LamDePage() {
           </div>
         </div>
 
-        <div className="flex-1 flex flex-col">
-          <div ref={centerRef} className="flex-1 bg-[#efe8d8] relative overflow-hidden">
+        <div className="flex-1 flex flex-col min-h-[45vh] md:min-h-0 min-w-0">
+          <div ref={centerRef} className="flex-1 bg-[#efe8d8] relative overflow-hidden min-h-[30vh] md:min-h-0">
             <canvas ref={canvasElRef} className="absolute inset-0" />
+            {currentIndex === -1 && !loadingImage && (
+              <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none p-6">
+                <div className="bg-white border-[3px] border-black rounded-xl shadow-[6px_6px_0_#000] px-6 py-5 max-w-sm text-center">
+                  <p className="font-display text-lg uppercase tracking-wide">Canvas trống</p>
+                  <p className="text-xs text-gray-600 mt-1 leading-relaxed">
+                    Tải thư mục ảnh ở panel trái, vẽ mũi tên / khung / text bằng công cụ bên phải,
+                    rồi lưu bằng <span className="font-mono font-bold text-black">Ctrl+S</span>.
+                    Kéo để di chuyển, lăn chuột để zoom.
+                  </p>
+                </div>
+              </div>
+            )}
             {loadingImage && (
               <span className="absolute top-3 left-3 bg-nb-yellow border-2 border-black px-2 py-1 text-xs font-bold shadow-[2px_2px_0_#000] z-10">
                 Đang tải...
@@ -929,7 +964,7 @@ export default function LamDePage() {
             <button
               onClick={() => loadImage(indexRef.current - 1)}
               disabled={currentIndex <= 0}
-              className="nb-btn px-3 py-2 rounded-lg text-sm"
+              className="nb-btn px-3 min-h-[44px] rounded-lg text-sm"
             >
               ❮ Trước
             </button>
@@ -939,7 +974,7 @@ export default function LamDePage() {
             <button
               onClick={() => loadImage(indexRef.current + 1)}
               disabled={currentIndex < 0 || currentIndex >= imageFiles.length - 1}
-              className="nb-btn px-3 py-2 rounded-lg text-sm"
+              className="nb-btn px-3 min-h-[44px] rounded-lg text-sm"
             >
               Sau ❯
             </button>
@@ -947,18 +982,18 @@ export default function LamDePage() {
               onClick={undo}
               disabled={!canUndo}
               title="Hoàn tác (Ctrl+Z)"
-              className="nb-btn px-3 py-2 rounded-lg text-sm"
+              className="nb-btn px-3 min-h-[44px] rounded-lg text-sm"
             >
               ↩️ Hoàn tác
             </button>
             <button
               onClick={() => setPanMode((v) => !v)}
               title="Chế độ di chuyển (kéo để pan)"
-              className={`nb-btn px-3 py-2 rounded-lg text-sm ${panMode ? 'bg-nb-cyan' : ''}`}
+              className={`nb-btn px-3 min-h-[44px] rounded-lg text-sm ${panMode ? 'bg-nb-cyan' : ''}`}
             >
               ✋ Di chuyển
             </button>
-            <button onClick={resetView} title="Vừa khung" className="nb-btn px-3 py-2 rounded-lg text-sm">
+            <button onClick={resetView} title="Vừa khung" className="nb-btn px-3 min-h-[44px] rounded-lg text-sm">
               Vừa khung
             </button>
             <span className="bg-nb-cyan border-2 border-black px-2 py-1 font-bold text-xs shadow-[2px_2px_0_#000]">
@@ -967,7 +1002,7 @@ export default function LamDePage() {
           </div>
         </div>
 
-        <div className="w-72 bg-white border-l-[3px] border-black p-4 flex flex-col gap-6 overflow-y-auto">
+        <div className="w-full md:w-72 shrink-0 bg-white border-t-[3px] md:border-t-0 md:border-l-[3px] border-black p-4 flex flex-col gap-6 md:overflow-y-auto md:h-full">
           <div>
             <h3 className="font-display text-sm uppercase tracking-wide mb-2 inline-block bg-nb-pink border-2 border-black px-2 py-0.5 shadow-[2px_2px_0_#000]">
               Đổi tên &amp; Lưu
@@ -991,7 +1026,7 @@ export default function LamDePage() {
             <button
               onClick={saveImage}
               className={`w-full border-2 border-black rounded-lg font-bold py-2 uppercase tracking-wider shadow-[3px_3px_0_#000] transition-all duration-100 hover:-translate-y-0.5 hover:shadow-[5px_5px_0_#000] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none ${
-                savedFlash ? 'bg-nb-lime text-black' : 'bg-nb-blue text-white'
+                savedFlash ? 'bg-nb-lime text-black' : 'bg-nb-blue text-black'
               }`}
             >
               {savedFlash ? '✅ Đã lưu xong!' : 'Lưu ảnh'}
@@ -1091,7 +1126,7 @@ export default function LamDePage() {
               if (deleteToastTimerRef.current) clearTimeout(deleteToastTimerRef.current);
               setDeleteToast(null);
             }}
-            className="w-7 h-7 flex items-center justify-center border-2 border-black rounded-full bg-white font-bold leading-none"
+            className="w-11 h-11 flex items-center justify-center border-2 border-black rounded-full bg-white font-bold leading-none"
             aria-label="Đóng"
           >
             ×
@@ -1110,7 +1145,7 @@ export default function LamDePage() {
             <h4 className="font-bold text-sm">Menu nhanh</h4>
             <button
               onClick={closeCtxMenu}
-              className="w-7 h-7 flex items-center justify-center border-2 border-black rounded-full bg-white font-bold leading-none"
+              className="w-11 h-11 flex items-center justify-center border-2 border-black rounded-full bg-white font-bold leading-none"
               aria-label="Đóng"
             >
               ×
@@ -1192,7 +1227,7 @@ export default function LamDePage() {
               !ctxMenu.target &&
               (!fabricRef.current || fabricRef.current.getActiveObjects().length === 0)
             }
-            className="nb-btn w-full py-2 rounded-lg text-sm bg-nb-red text-white disabled:opacity-40 disabled:cursor-not-allowed"
+            className="nb-btn w-full py-2 rounded-lg text-sm bg-nb-red text-black disabled:opacity-40 disabled:cursor-not-allowed"
           >
             🗑️ Xóa đối tượng
           </button>

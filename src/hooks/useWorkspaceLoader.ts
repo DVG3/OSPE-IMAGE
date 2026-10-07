@@ -88,6 +88,10 @@ async function findWorkspacesRecursive(
 
 export function useWorkspaceLoader() {
   const [workspaces, setWorkspaces] = useState<LoadedWorkspace[]>([]);
+  // Surfaces loader failures inline (rendered by the caller) instead of alert()
+  const [loaderError, setLoaderError] = useState<string | null>(null);
+
+  const clearLoaderError = useCallback(() => setLoaderError(null), []);
 
   // Add workspace via Directory Picker (with automatic workspace.json discovery & error if missing)
   const addWorkspace = useCallback(async () => {
@@ -98,9 +102,11 @@ export function useWorkspaceLoader() {
         await findWorkspacesRecursive(dirHandle, foundWorkspaces);
 
         if (foundWorkspaces.length === 0) {
-          alert('Không tìm thấy file workspace.json nào trong thư mục đã chọn! Vui lòng chọn đúng thư mục chứa Workspace.');
+          setLoaderError('Không tìm thấy file workspace.json nào trong thư mục đã chọn! Vui lòng chọn đúng thư mục chứa Workspace.');
           return;
         }
+
+        setLoaderError(null);
 
         const newLoadedList: LoadedWorkspace[] = foundWorkspaces.map((fw) => ({
           handle: fw.handle,
@@ -121,7 +127,7 @@ export function useWorkspaceLoader() {
       } catch (err) {
         if ((err as Error).name !== 'AbortError') {
           console.error('Directory picker error:', err);
-          alert('Lỗi khi mở thư mục: ' + String(err));
+          setLoaderError('Lỗi khi mở thư mục: ' + String(err));
         }
       }
     }
@@ -140,7 +146,7 @@ export function useWorkspaceLoader() {
     }
 
     if (wsFiles.length === 0) {
-      alert('Không tìm thấy file workspace.json nào trong thư mục đã chọn! Vui lòng chọn đúng thư mục chứa Workspace.');
+      setLoaderError('Không tìm thấy file workspace.json nào trong thư mục đã chọn! Vui lòng chọn đúng thư mục chứa Workspace.');
       return;
     }
 
@@ -210,10 +216,11 @@ export function useWorkspaceLoader() {
     }
 
     if (newWorkspaces.length === 0) {
-      alert('Không thể đọc dữ liệu file workspace.json! Vui lòng kiểm tra định dạng tệp.');
+      setLoaderError('Không thể đọc dữ liệu file workspace.json! Vui lòng kiểm tra định dạng tệp.');
       return;
     }
 
+    setLoaderError(null);
     setWorkspaces((prev) => {
       const existingIds = new Set(newWorkspaces.map((nw) => nw.workspaceId));
       const filtered = prev.filter((w) => !existingIds.has(w.workspaceId));
@@ -231,6 +238,8 @@ export function useWorkspaceLoader() {
 
   return {
     workspaces,
+    loaderError,
+    clearLoaderError,
     addWorkspace,
     addWorkspaceFallback,
     removeWorkspace,

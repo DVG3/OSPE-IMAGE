@@ -115,57 +115,35 @@ export default function QuizPage() {
 
   // Determine active phase based on current source
   const currentPhase = sourceType === 'flashcard' ? fcEngine.phase : wsEngine.phase;
+  const isRunning = currentPhase === 'running';
+
+  const examHeader = (
+    <header className="bg-nb-yellow border-b-[3px] border-black px-4 py-2.5 flex justify-between items-center gap-3 flex-shrink-0">
+      <div className="w-20" />
+      <h1 className="font-display text-lg sm:text-xl uppercase tracking-wide text-center">
+        Hệ Thống Luyện Tập Chạy Trạm
+      </h1>
+      <button
+        onClick={handleReset}
+        className="nb-btn px-3 py-1.5 text-xs uppercase tracking-wider"
+        title="Reset toàn bộ"
+      >
+        Reset
+      </button>
+    </header>
+  );
 
   return (
-    <div className="min-h-screen bg-cream text-slate-900 font-sans flex flex-col">
+    <div
+      className={`bg-cream text-slate-900 font-sans flex flex-col ${
+        isRunning ? 'h-dvh overflow-hidden' : 'min-h-screen'
+      }`}
+    >
       <NavBar />
-      <main className="flex-1 flex items-start sm:items-center justify-center p-2 sm:p-4">
-        <div className="bg-white border-[3px] border-black shadow-[8px_8px_0_#000] w-full max-w-5xl overflow-hidden min-h-[560px] sm:min-h-[700px] flex flex-col relative">
-          {/* Header */}
-          <header className="bg-nb-yellow border-b-[3px] border-black px-4 py-2.5 flex justify-between items-center gap-3">
-            <div className="w-20" />
-            <h1 className="font-display text-lg sm:text-xl uppercase tracking-wide text-center">
-              Hệ Thống Luyện Tập Chạy Trạm
-            </h1>
-            <button
-              onClick={handleReset}
-              className="nb-btn px-3 py-1.5 text-xs uppercase tracking-wider"
-              title="Reset toàn bộ"
-            >
-              Reset
-            </button>
-          </header>
-
-          {/* SETUP SCREEN */}
-          {currentPhase === 'idle' && (
-            <SetupScreen
-              sourceType={sourceType}
-              onSourceTypeChange={setSourceType}
-              folders={folders}
-              onAddFolder={addFolder}
-              onRemoveFolder={removeFolder}
-              totalCount={totalCount}
-              uniqueAnswers={uniqueAnswers}
-              mode={mode}
-              onModeChange={setMode}
-              workspaces={wsLoader.workspaces}
-              onAddWorkspace={wsLoader.addWorkspace}
-              onAddWorkspaceFallback={wsLoader.addWorkspaceFallback}
-              onRemoveWorkspace={wsLoader.removeWorkspace}
-              workspaceQuestionCount={workspaceQuestionCount}
-              classifyMode={classifyMode}
-              onClassifyModeChange={setClassifyMode}
-              identifyMode={identifyMode}
-              onIdentifyModeChange={setIdentifyMode}
-              workspaceAnswerType={workspaceAnswerType}
-              onWorkspaceAnswerTypeChange={setWorkspaceAnswerType}
-              timeText={timeText}
-              onTimeTextChange={setTimeText}
-              limitText={limitText}
-              onLimitTextChange={setLimitText}
-              onStart={handleStart}
-            />
-          )}
+      {isRunning ? (
+        /* RUNNING: full-page exam — image stage flexes to fill the viewport */
+        <main className="flex-1 flex flex-col min-h-0">
+          {examHeader}
 
           {/* FLASH CARD RUNNING SCREEN */}
           {sourceType === 'flashcard' && currentPhase === 'running' && fcEngine.questions[fcEngine.index] && (
@@ -200,27 +178,66 @@ export default function QuizPage() {
               onNext={wsEngine.next}
             />
           )}
+        </main>
+      ) : (
+        <main className="flex-1 flex items-start sm:items-center justify-center p-2 sm:p-4">
+          <div className="bg-white border-[3px] border-black shadow-[8px_8px_0_#000] w-full max-w-5xl overflow-hidden min-h-[560px] sm:min-h-[700px] flex flex-col relative">
+            {examHeader}
 
-          {/* RESULT SCREEN */}
-          {sourceType === 'flashcard' && currentPhase === 'finished' && (
-            <ResultScreen
-              correct={fcEngine.score}
-              total={fcEngine.questions.length}
-              wrongAnswers={fcEngine.wrongAnswers}
-              onReset={fcEngine.reset}
-            />
-          )}
+            {/* SETUP SCREEN */}
+            {currentPhase === 'idle' && (
+              <SetupScreen
+                sourceType={sourceType}
+                onSourceTypeChange={setSourceType}
+                folders={folders}
+                onAddFolder={addFolder}
+                onRemoveFolder={removeFolder}
+                totalCount={totalCount}
+                uniqueAnswers={uniqueAnswers}
+                mode={mode}
+                onModeChange={setMode}
+              workspaces={wsLoader.workspaces}
+              loaderError={wsLoader.loaderError}
+              onClearLoaderError={wsLoader.clearLoaderError}
+              onAddWorkspace={wsLoader.addWorkspace}
+                onAddWorkspaceFallback={wsLoader.addWorkspaceFallback}
+                onRemoveWorkspace={wsLoader.removeWorkspace}
+                workspaceQuestionCount={workspaceQuestionCount}
+                classifyMode={classifyMode}
+                onClassifyModeChange={setClassifyMode}
+                identifyMode={identifyMode}
+                onIdentifyModeChange={setIdentifyMode}
+                workspaceAnswerType={workspaceAnswerType}
+                onWorkspaceAnswerTypeChange={setWorkspaceAnswerType}
+                timeText={timeText}
+                onTimeTextChange={setTimeText}
+                limitText={limitText}
+                onLimitTextChange={setLimitText}
+                onStart={handleStart}
+              />
+            )}
 
-          {sourceType === 'workspace' && currentPhase === 'finished' && (
-            <ResultScreen
-              correct={wsEngine.score}
-              total={wsEngine.questions.length}
-              workspaceWrongAnswers={wsEngine.wrongAnswers}
-              onReset={wsEngine.reset}
-            />
-          )}
-        </div>
-      </main>
+            {/* RESULT SCREEN */}
+            {sourceType === 'flashcard' && currentPhase === 'finished' && (
+              <ResultScreen
+                correct={fcEngine.score}
+                total={fcEngine.questions.length}
+                wrongAnswers={fcEngine.wrongAnswers}
+                onReset={fcEngine.reset}
+              />
+            )}
+
+            {sourceType === 'workspace' && currentPhase === 'finished' && (
+              <ResultScreen
+                correct={wsEngine.score}
+                total={wsEngine.questions.length}
+                workspaceWrongAnswers={wsEngine.wrongAnswers}
+                onReset={wsEngine.reset}
+              />
+            )}
+          </div>
+        </main>
+      )}
     </div>
   );
 }

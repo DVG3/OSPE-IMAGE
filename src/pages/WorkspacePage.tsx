@@ -72,6 +72,20 @@ export default function WorkspacePage() {
   // Fallback hidden input for folder upload
   const folderInputRef = useRef<HTMLInputElement>(null);
 
+  // First-run welcome overlay (session-only; reappears next load while empty)
+  const [welcomeDismissed, setWelcomeDismissed] = useState(false);
+
+  // Inline notice bar replacing window.alert / window.confirm.
+  // Errors explain + dismiss; confirms carry the follow-up action inline.
+  interface PageNotice {
+    kind: 'error' | 'confirm';
+    message: string;
+    confirmLabel?: string;
+    danger?: boolean;
+    onConfirm?: () => void;
+  }
+  const [notice, setNotice] = useState<PageNotice | null>(null);
+
   // Get active workspace and current image
   const currentWorkspace = useMemo(
     () => workspaces.find((w) => w.workspaceId === currentWorkspaceId) ?? null,
@@ -227,7 +241,7 @@ export default function WorkspacePage() {
       }
     } catch (err) {
       console.error('Error saving workspace:', err);
-      alert('Không thể lưu file workspace.json: ' + String(err));
+      setNotice({ kind: 'error', message: 'Không thể lưu file workspace.json: ' + String(err) });
     }
   }, [currentWorkspace]);
 
@@ -322,12 +336,13 @@ export default function WorkspacePage() {
           return;
         }
 
-        // Type-to-Caption ONLY for freshly created object (first keystroke right after creation)
+        // Type-to-Caption ONLY for freshly created object (first keystroke right after creation).
+        // '?' is reserved for the global shortcuts dialog, so it never becomes a caption seed.
         const isFreshlyCreated =
           justCreatedObjIdRef.current &&
           selectedItems.some((s) => s.type === 'object' && s.id === justCreatedObjIdRef.current);
 
-        if (isFreshlyCreated && e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey && e.key !== ' ') {
+        if (isFreshlyCreated && e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey && e.key !== ' ' && e.key !== '?') {
           e.preventDefault();
           justCreatedObjIdRef.current = null;
           handleOpenQuickCaption(e.key);
@@ -456,51 +471,54 @@ export default function WorkspacePage() {
             setCurrentRelPath(firstImgPath);
           }
         } else {
-          // No workspace.json found: ask user to initialize a new workspace
-          const confirmCreate = window.confirm(
-            `Không tìm thấy file workspace.json nào trong thư mục "${dirHandle.name}".\n\nBạn có muốn khởi tạo một Workspace mới cho thư mục ảnh này không?`
-          );
-          if (!confirmCreate) return;
+          // No workspace.json found: offer inline to initialize a new workspace
+          const createNewWorkspace = async () => {
+            const imageFiles = new Map<string, File>();
+            await collectImagesInDirHandle(dirHandle, imageFiles);
 
-          const imageFiles = new Map<string, File>();
-          await collectImagesInDirHandle(dirHandle, imageFiles);
+            const wsId = generateId('ws');
+            const wsName = dirHandle.name;
+            const finalData: WorkspaceFile = {
+              workspaceId: wsId,
+              name: wsName,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+              images: {},
+            };
 
-          const wsId = generateId('ws');
-          const wsName = dirHandle.name;
-          const finalData: WorkspaceFile = {
-            workspaceId: wsId,
-            name: wsName,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            images: {},
+            try {
+              const fileHandle = await dirHandle.getFileHandle('workspace.json', { create: true });
+              const writable = await fileHandle.createWritable();
+              await writable.write(new Blob([JSON.stringify(finalData, null, 2)], { type: 'application/json' }));
+              await writable.close();
+            } catch (createErr) {
+              console.warn('Could not auto-create workspace.json on disk', createErr);
+            }
+
+            const newWs: LoadedWorkspace = {
+              handle: dirHandle,
+              workspaceId: wsId,
+              name: wsName,
+              color: getRandomColor(),
+              visible: true,
+              data: finalData,
+              imageFiles,
+              isDirty: false,
+            };
+
+            setWorkspaces((prev) => [...prev, newWs]);
+            setCurrentWorkspaceId(wsId);
+            const firstImgPath = Array.from(imageFiles.keys())[0];
+            if (firstImgPath) {
+              setCurrentRelPath(firstImgPath);
+            }
           };
-
-          try {
-            const fileHandle = await dirHandle.getFileHandle('workspace.json', { create: true });
-            const writable = await fileHandle.createWritable();
-            await writable.write(new Blob([JSON.stringify(finalData, null, 2)], { type: 'application/json' }));
-            await writable.close();
-          } catch (createErr) {
-            console.warn('Could not auto-create workspace.json on disk', createErr);
-          }
-
-          const newWs: LoadedWorkspace = {
-            handle: dirHandle,
-            workspaceId: wsId,
-            name: wsName,
-            color: getRandomColor(),
-            visible: true,
-            data: finalData,
-            imageFiles,
-            isDirty: false,
-          };
-
-          setWorkspaces((prev) => [...prev, newWs]);
-          setCurrentWorkspaceId(wsId);
-          const firstImgPath = Array.from(imageFiles.keys())[0];
-          if (firstImgPath) {
-            setCurrentRelPath(firstImgPath);
-          }
+          setNotice({
+            kind: 'confirm',
+            message: `Không tìm thấy file workspace.json nào trong thư mục "${dirHandle.name}". Khởi tạo một Workspace mới cho thư mục ảnh này?`,
+            confirmLabel: 'Khởi tạo',
+            onConfirm: () => void createNewWorkspace(),
+          });
         }
       } catch (err) {
         if ((err as Error).name !== 'AbortError') {
@@ -606,26 +624,22 @@ export default function WorkspacePage() {
         }
       }
     } else {
-      // No workspace.json: ask to create
-      const confirmCreate = window.confirm(
-        'Không tìm thấy file workspace.json nào trong thư mục đã tải lên. Bạn có muốn tạo Workspace mới cho các ảnh này không?'
-      );
-      if (!confirmCreate) return;
+      // No workspace.json: offer inline to create a new workspace
+      const createNewFallbackWorkspace = () => {
+        const imageFiles = new Map<string, File>();
+        let folderName = 'Workspace';
 
-      const imageFiles = new Map<string, File>();
-      let folderName = 'Workspace';
-
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const lower = file.name.toLowerCase();
-        let relPath = file.name;
-        if (file.webkitRelativePath) {
-          const parts = file.webkitRelativePath.split('/');
-          if (parts.length > 1) {
-            folderName = parts[0];
-            relPath = parts.slice(1).join('/');
+        for (let i = 0; i < files.length; i++) {
+          const file = files[i];
+          const lower = file.name.toLowerCase();
+          let relPath = file.name;
+          if (file.webkitRelativePath) {
+            const parts = file.webkitRelativePath.split('/');
+            if (parts.length > 1) {
+              folderName = parts[0];
+              relPath = parts.slice(1).join('/');
+            }
           }
-        }
         if (
           lower.endsWith('.png') ||
           lower.endsWith('.jpg') ||
@@ -662,6 +676,13 @@ export default function WorkspacePage() {
       if (firstImgPath) {
         setCurrentRelPath(firstImgPath);
       }
+    };
+    setNotice({
+        kind: 'confirm',
+        message: 'Không tìm thấy file workspace.json nào trong thư mục đã tải lên. Tạo Workspace mới cho các ảnh này?',
+        confirmLabel: 'Tạo Workspace',
+        onConfirm: createNewFallbackWorkspace,
+      });
     }
   };
 
@@ -674,26 +695,34 @@ export default function WorkspacePage() {
 
   // Close workspace
   const handleCloseWorkspace = (workspaceId: string) => {
+    const doClose = () => {
+      setWorkspaces((prev) => prev.filter((w) => w.workspaceId !== workspaceId));
+      if (currentWorkspaceId === workspaceId) {
+        const remaining = workspaces.filter((w) => w.workspaceId !== workspaceId);
+        if (remaining.length > 0) {
+          setCurrentWorkspaceId(remaining[0].workspaceId);
+          const firstImg = Array.from(remaining[0].imageFiles.keys())[0];
+          setCurrentRelPath(firstImg || null);
+        } else {
+          setCurrentWorkspaceId(null);
+          setCurrentRelPath(null);
+        }
+      }
+    };
+
     const ws = workspaces.find((w) => w.workspaceId === workspaceId);
     if (ws?.isDirty) {
-      const confirmClose = window.confirm(
-        `Workspace "${ws.name}" có thay đổi chưa lưu. Bạn có chắc muốn đóng không?`
-      );
-      if (!confirmClose) return;
+      setNotice({
+        kind: 'confirm',
+        message: `Workspace "${ws.name}" có thay đổi chưa lưu. Đóng mà không lưu?`,
+        confirmLabel: 'Đóng',
+        danger: true,
+        onConfirm: doClose,
+      });
+      return;
     }
 
-    setWorkspaces((prev) => prev.filter((w) => w.workspaceId !== workspaceId));
-    if (currentWorkspaceId === workspaceId) {
-      const remaining = workspaces.filter((w) => w.workspaceId !== workspaceId);
-      if (remaining.length > 0) {
-        setCurrentWorkspaceId(remaining[0].workspaceId);
-        const firstImg = Array.from(remaining[0].imageFiles.keys())[0];
-        setCurrentRelPath(firstImg || null);
-      } else {
-        setCurrentWorkspaceId(null);
-        setCurrentRelPath(null);
-      }
-    }
+    doClose();
   };
 
   // Rename image
@@ -704,7 +733,7 @@ export default function WorkspacePage() {
 
       const trimmedName = newFileName.trim();
       if (!trimmedName) {
-        alert('Tên tệp không được để trống.');
+        setNotice({ kind: 'error', message: 'Tên tệp không được để trống.' });
         return;
       }
 
@@ -718,7 +747,7 @@ export default function WorkspacePage() {
       if (newRelPath === oldRelPath) return;
 
       if (ws.imageFiles.has(newRelPath)) {
-        alert('Tên tệp này đã tồn tại trong workspace!');
+        setNotice({ kind: 'error', message: 'Tên tệp này đã tồn tại trong workspace!' });
         return;
       }
 
@@ -742,7 +771,7 @@ export default function WorkspacePage() {
           await parentDir.removeEntry(oldFileName);
         } catch (err) {
           console.error('Error renaming on disk:', err);
-          alert('Không thể đổi tên tệp trên ổ đĩa: ' + String(err));
+          setNotice({ kind: 'error', message: 'Không thể đổi tên tệp trên ổ đĩa: ' + String(err) });
           return;
         }
       }
@@ -795,23 +824,22 @@ export default function WorkspacePage() {
       if (!ws) return;
 
       const fileName = relPath.replace(/\\/g, '/').split('/').pop()!;
-      const confirmed = window.confirm(`Bạn có chắc chắn muốn xóa ảnh "${fileName}" không? Thao tác này không thể hoàn tác.`);
-      if (!confirmed) return;
 
-      if (ws.handle) {
-        try {
-          const parts = relPath.replace(/\\/g, '/').split('/');
-          let parentDir = ws.handle;
-          for (let i = 0; i < parts.length - 1; i++) {
-            parentDir = await parentDir.getDirectoryHandle(parts[i]);
+      const doDelete = async () => {
+        if (ws.handle) {
+          try {
+            const parts = relPath.replace(/\\/g, '/').split('/');
+            let parentDir = ws.handle;
+            for (let i = 0; i < parts.length - 1; i++) {
+              parentDir = await parentDir.getDirectoryHandle(parts[i]);
+            }
+            await parentDir.removeEntry(fileName);
+          } catch (err) {
+            console.error('Error deleting on disk:', err);
+            setNotice({ kind: 'error', message: 'Không thể xóa tệp trên ổ đĩa: ' + String(err) });
+            return;
           }
-          await parentDir.removeEntry(fileName);
-        } catch (err) {
-          console.error('Error deleting on disk:', err);
-          alert('Không thể xóa tệp trên ổ đĩa: ' + String(err));
-          return;
         }
-      }
 
       setWorkspaces((prev) =>
         prev.map((w) => {
@@ -840,6 +868,15 @@ export default function WorkspacePage() {
         const remainingImages = Array.from(ws.imageFiles.keys()).filter((p) => p !== relPath);
         setCurrentRelPath(remainingImages.length > 0 ? remainingImages[0] : null);
       }
+    };
+
+    setNotice({
+        kind: 'confirm',
+        message: `Xóa ảnh "${fileName}" khỏi workspace? Thao tác này không thể hoàn tác.`,
+        confirmLabel: 'Xóa ảnh',
+        danger: true,
+        onConfirm: () => void doDelete(),
+      });
     },
     [workspaces, currentWorkspaceId, currentRelPath]
   );
@@ -855,7 +892,7 @@ export default function WorkspacePage() {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-cream overflow-hidden">
+    <div className="h-dvh flex flex-col bg-cream overflow-hidden">
       {/* Hidden input for fallback directory loading */}
       <input
         type="file"
@@ -867,6 +904,43 @@ export default function WorkspacePage() {
 
       {/* Main Top Navigation */}
       <NavBar />
+
+      {/* Inline notice bar (errors + confirmations, never a native dialog) */}
+      {notice && (
+        <div
+          role={notice.kind === 'confirm' ? 'alertdialog' : 'alert'}
+          className={`border-b-[3px] border-black px-3 py-2 flex items-center justify-center gap-3 flex-shrink-0 z-30 ${
+            notice.kind === 'confirm' ? 'bg-nb-yellow' : 'bg-nb-red/20'
+          }`}
+        >
+          <p className="text-xs sm:text-sm font-bold text-gray-900 max-w-3xl">{notice.message}</p>
+          <div className="flex gap-2 flex-shrink-0">
+            {notice.kind === 'confirm' && (
+              <button
+                type="button"
+                autoFocus
+                onClick={() => {
+                  const action = notice.onConfirm;
+                  setNotice(null);
+                  action?.();
+                }}
+                className={`nb-btn px-3 py-1.5 min-h-[44px] rounded-lg text-xs uppercase tracking-wider ${
+                  notice.danger ? 'bg-nb-red' : 'bg-nb-lime'
+                }`}
+              >
+                {notice.confirmLabel ?? 'Đồng ý'}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setNotice(null)}
+                className="nb-btn px-3 py-1.5 min-h-[44px] rounded-lg text-xs uppercase tracking-wider bg-white"
+            >
+              {notice.kind === 'confirm' ? 'Hủy' : 'Đã hiểu'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Sub-header for Workspace (File & Workspace menus) */}
       <WorkspaceHeader
@@ -883,6 +957,49 @@ export default function WorkspacePage() {
 
       {/* 3-Column Resizable Body */}
       <div className="flex-1 min-h-0 relative">
+        {workspaces.length === 0 && !welcomeDismissed && (
+          <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/25 p-4">
+            <div className="relative bg-white border-[3px] border-black rounded-xl shadow-[8px_8px_0_#000] px-6 py-5 max-w-md w-full text-center">
+              <button
+                type="button"
+                onClick={() => setWelcomeDismissed(true)}
+                aria-label="Đóng hướng dẫn"
+                className="absolute top-2 right-2 w-11 h-11 flex items-center justify-center border-2 border-black rounded-full bg-white font-bold leading-none hover:bg-nb-yellow"
+              >
+                ×
+              </button>
+              <p className="font-display text-xl uppercase tracking-wide pr-6">
+                Chú thích ảnh giải phẫu
+              </p>
+              <p className="text-xs text-gray-600 mt-2 leading-relaxed">
+                Chấm điểm cấu trúc trên ảnh (<span className="font-mono font-bold text-black">D</span>),
+                tô vùng (<span className="font-mono font-bold text-black">H</span>), lưu lại —
+                rồi dùng chính workspace này làm đề thi ở trang Ôn Tập.
+              </p>
+              <div className="flex items-center justify-center gap-1.5 mt-3 text-xs font-bold">
+                <span className="bg-nb-yellow border-2 border-black px-2 py-0.5 rounded-full">1. Tải thư mục</span>
+                <span aria-hidden="true">→</span>
+                <span className="bg-nb-cyan border-2 border-black px-2 py-0.5 rounded-full">2. Chấm điểm</span>
+                <span aria-hidden="true">→</span>
+                <span className="bg-nb-lime border-2 border-black px-2 py-0.5 rounded-full">3. Lưu (Ctrl+S)</span>
+              </div>
+              <button
+                type="button"
+                onClick={handleLoadWorkspace}
+                className="nb-btn w-full mt-4 bg-nb-cyan py-3 rounded-lg text-sm uppercase tracking-wider"
+              >
+                📁 Tải workspace để bắt đầu
+              </button>
+              <button
+                type="button"
+                onClick={() => folderInputRef.current?.click()}
+                className="mt-2 text-xs font-bold underline decoration-nb-blue decoration-2 underline-offset-2 hover:text-nb-blue"
+              >
+                hoặc tải thư mục thủ công (mọi trình duyệt)
+              </button>
+            </div>
+          </div>
+        )}
         <ResizableLayout
           leftContentTop={
             <WorkspaceFileTree

@@ -26,6 +26,20 @@
   animation: shake 0.5s;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .animate-shake {
+    animation: none;
+  }
+}
+
+/* iOS Safari force-zooms on focus when inputs are under 16px.
+   Keep the desktop look, but guarantee the floor on touch layouts. */
+@media (max-width: 767px) {
+  .nb-input {
+    font-size: 16px;
+  }
+}
+
 :focus-visible {
   outline: 3px solid #000;
   outline-offset: 2px;

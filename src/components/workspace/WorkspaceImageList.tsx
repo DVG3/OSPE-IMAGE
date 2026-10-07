@@ -67,7 +67,7 @@ export default function WorkspaceImageList({
       <div className="px-3 py-1.5 bg-gray-100 border-b border-black flex items-center justify-between">
         <span className="font-bold text-xs uppercase tracking-wider flex items-center gap-1.5">
           <span>🖼️ Danh sách ảnh</span>
-          <span className="px-1.5 py-0.2 bg-black text-white rounded-full text-[10px]">
+          <span className="px-1.5 py-0.2 bg-black text-white rounded-full text-xs">
             {images.length}
           </span>
         </span>
@@ -75,7 +75,7 @@ export default function WorkspaceImageList({
           <button
             type="button"
             onClick={onLoadWorkspace}
-            className="nb-btn px-2 py-0.5 text-[11px] rounded bg-nb-yellow"
+            className="nb-btn px-2 py-0.5 text-xs rounded bg-nb-yellow"
           >
             + Mở thư mục
           </button>
@@ -125,12 +125,12 @@ export default function WorkspaceImageList({
                     <div className="font-semibold text-xs truncate text-gray-900">
                       {item.fileName}
                       {hasDuplicateName && (
-                        <span className="text-[10px] text-gray-500 ml-1 font-normal">
+                        <span className="text-xs text-gray-500 ml-1 font-normal">
                           ({item.workspaceName})
                         </span>
                       )}
                     </div>
-                    <div className="flex items-center gap-2 mt-0.5 text-[10px] text-gray-500">
+                    <div className="flex items-center gap-2 mt-0.5 text-xs text-gray-500">
                       <span>{item.objectCount} đánh dấu</span>
                     </div>
                   </div>
